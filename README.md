@@ -7,13 +7,14 @@
 > specifically install `tkinter` independently of Python;
 > for this purpose use the following command with homebrew
 > installed:
-> ```commandline
+> ```bash
 > brew install python-tk@3.11
 >```
 
 Some pieces of this project that are especially of note:
-- In `bookSearch.py`, I use some quite complicated string parsing so that inputs can be naturalistic
-  - Try an example like `books  by philipp dettmer in non-fiction` to see this in practice
-- …
+- In `bookSearch.py`, I use some quite complicated string parsing so that inputs can be naturalistic.
+  - Try an example like `books  by philipp dettmer in non-fiction` to see this in practice.
+- The script that needs to be executed to demonstrate the app in its entirety is `menu.py`.
 
-Also, the weird collection of books being used for the data here are from my collection!
+Also, the weird collection of books being used for the 
+data here is from my collection!
