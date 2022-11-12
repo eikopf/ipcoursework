@@ -6,43 +6,41 @@ run using this script.
 """
 
 from tkinter import *
-from tkinter import ttk
 
 
 def on_search_clicked(event: Event) -> None:
     """To be called when the *Search* button is pressed."""
     event.widget.event_generate("<<SearchClicked>>")
-    print(event, event.widget)
-    return None
 
 
 def render_search_view(event: Event) -> None:
     """Renders the search window in the main viewport"""
-    print("search view")
+    viewport: Frame = event.widget.nametowidget(".viewport")
+    viewport.configure(bg="red")
     return None
 
 
 def on_io_clicked(event: Event) -> None:
     """To be called when the *In/Out* button is pressed."""
     event.widget.event_generate("<<IOClicked>>")
-    print(event, event.widget)
     return None
 
 
 def render_io_view(event: Event) -> None:
-    print("io view")
+    viewport: Frame = event.widget.nametowidget(".viewport")
+    viewport.configure(bg="green")
     return None
 
 
 def on_order_clicked(event: Event) -> None:
     """To be called when the *Order* button is pressed."""
     event.widget.event_generate("<<OrderClicked>>")
-    print(event, event.widget)
     return None
 
 
 def render_order_view(event: Event) -> None:
-    print("order view")
+    viewport: Frame = event.widget.nametowidget(".viewport")
+    viewport.configure(bg="blue")
     return None
 
 
@@ -53,6 +51,9 @@ def init_menu() -> Tk:
     root.title("Library Tool: Oliver Wooding")
     root.configure(bg='black')
     root.geometry("780x500")
+    root.bind("<<SearchClicked>>", render_search_view, "+")
+    root.bind("<<IOClicked>>", render_io_view, "+")
+    root.bind("<<OrderClicked>>", render_order_view, "+")
 
     # init button frame
     button_frame = Frame(root, width=180, height=60)
@@ -75,12 +76,9 @@ def init_menu() -> Tk:
     purchase_button.bind('<Button-1>', on_order_clicked)
 
     # init viewport
-    viewport = Frame(root, width=560, height=490)
+    viewport = Frame(root, width=560, height=490, name="viewport")
     viewport.grid(row=0, column=1, columnspan=4, rowspan=8, padx=5, pady=5)
     viewport.configure(bg='red')
-    viewport.bind("<<SearchClicked>>", render_search_view)
-    viewport.bind("<<IOClicked>>", render_io_view)
-    viewport.bind("<<OrderClicked>>", render_order_view)
 
     return root
 
