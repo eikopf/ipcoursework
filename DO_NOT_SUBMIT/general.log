@@ -10,3 +10,10 @@ DEBUG:root:switched to io view
 DEBUG:root:switched to search view
 DEBUG:root:switched to io view
 DEBUG:root:switched to order view
+DEBUG:root:checkout called with book_id: 17, member_id: 1976, member_id is_valid: True,book_id_is_valid: False,book_id in loaned_books: False,book_id in reserved_books: False
+DEBUG:root:checkout called with book_id: 17, member_id: 1976, member_id is_valid: True,book_id_is_valid: True,book_id in loaned_books: False,book_id in reserved_books: False
+DEBUG:root:switched to search view
+DEBUG:root:switched to io view
+DEBUG:root:switched to order view
+DEBUG:root:switched to io view
+DEBUG:root:switched to search view

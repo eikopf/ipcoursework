@@ -58,15 +58,31 @@ def write_book(book: Book):
 
 
 def write_log(s: str):
-    with open("data_files/logfile.txt", 'w') as log:
+    """Writes a log to the logfile and assumes that it is valid."""
+    with open("data_files/logfile.txt", 'a') as log:
         log.write(s)
 
 
 def get_logs() -> list[Log]:
+    """Returns a list of the logs in the logfile in
+    sequential order."""
     with open("data_files/logfile.txt", 'r') as log:
         logs = log.readlines()[1:]
 
     return [(l.split(" ")[0], int(l.split(" ")[1]), l.split(" ")[2]) for l in logs]
+
+
+def get_open_logs() -> list[Log]:  # TODO
+    """Returns a list of logs which have not been closed
+    by a subsequent log. OUT logs are closed by a RETURN log, and
+    RESERVE logs are closed by an UNRESERVE log or OUT log."""
+    pass
+
+
+def filter_logs_with_id(logs: list[Log], book_id: int) -> list[Log]:
+    """Iterates over a list of logs and returns only the logs
+    with the given ID."""
+    return list(filter(lambda x: x[1] == book_id, logs))
 
 
 def write_books(books: list[Book]):
