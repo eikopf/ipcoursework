@@ -1,5 +1,19 @@
+"""Checkout and Reservation Tools
+
+This script provides functions to deal with checking out and reserving
+books by members with valid IDs.
+
+This script also handles much of the detail of writing to the logfile, where
+each line (aside from the header) takes the form of ACTION BOOK_ID MEMBER_ID.
+
+- ACTION: can be OUT, RETURN, RESERVE, or DERESERVE
+- BOOK_ID: an integer corresponding to the ID of a particular book
+- MEMBER_ID: a 4-digit string denoting a particular member
+"""
+
 import logging
-from database import get_book, get_logs, write_log, Book, Log
+from database import get_book, get_logs, write_log, \
+    Log, filter_logs_with_id, get_open_logs
 from re import fullmatch
 
 
@@ -38,8 +52,6 @@ def get_reserved_book_ids(logs: list[Log]) -> set[int]:
             out.add(log[1])
         elif log[0] == 'UNRESERVE':
             out.remove(log[1])
-        elif log[0] == 'OUT' and log[1] in out:
-            out.remove(log[1])
     return out
 
 
@@ -71,7 +83,7 @@ def reserve(book_id: int, member_id: str):
 
     reservation_allowed = member_id_is_valid(member_id) and \
                           book_id_is_valid(book_id) and \
-                          book_id not in get_loaned_book_ids(get_logs()) and \
+                          book_id in get_loaned_book_ids(get_logs()) and \
                           book_id not in get_reserved_book_ids(get_logs())
 
     if reservation_allowed:
@@ -82,8 +94,19 @@ def reserve(book_id: int, member_id: str):
                        "reservation_allowed": reservation_allowed})
 
 
-def unreserve(book_id: int):
-    pass
+def dereserve(book_id: int):
+    """Dereserves a book based on its ID, and writes the relevant
+    data to the logfile; raises `IOError` if this fails."""
+    logging.debug(f'dereserve called with book_id: {book_id}')
+    open_logs_for_id = filter_logs_with_id(get_open_logs(), book_id)
+
+    for log in open_logs_for_id:
+        if log[0] == "RESERVE":
+            write_log(f"DERESERVE {book_id} {log[2]}")
+            return
+
+    raise IOError({"open_logs_for_id": open_logs_for_id,
+                   "book_id": book_id})
 
 
 if __name__ == '__main__':

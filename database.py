@@ -72,11 +72,25 @@ def get_logs() -> list[Log]:
     return [(l.split(" ")[0], int(l.split(" ")[1]), l.split(" ")[2]) for l in logs]
 
 
-def get_open_logs() -> list[Log]:  # TODO
+def get_open_logs() -> list[Log]:
     """Returns a list of logs which have not been closed
     by a subsequent log. OUT logs are closed by a RETURN log, and
-    RESERVE logs are closed by an UNRESERVE log or OUT log."""
-    pass
+    RESERVE logs are closed by a DERESERVE log or OUT log."""
+    out: list[Log] = []
+    for log in get_logs():
+        if log[0] == "RESERVE":
+            out.append(log)
+        elif log[0] == "OUT":
+            out.append(log)
+            try:
+                out.remove(("RESERVE", log[1], log[2]))
+            except ValueError:
+                pass
+        elif log[0] == "RETURN":
+            out.remove(("OUT", log[1], log[2]))
+        else:  # handles DERESERVE
+            out.remove(("RESERVE", log[1], log[2]))
+    return out
 
 
 def filter_logs_with_id(logs: list[Log], book_id: int) -> list[Log]:

@@ -91,15 +91,36 @@ def init_menu() -> Tk:
     log_frame = Frame(root, width=180, height=430, name="log_frame")
     log_frame.grid(row=1, column=0, rowspan=7, padx=10, pady=5)
     log_frame.configure(bg='purple')
+    log_frame_label = Label(log_frame,
+                            name='log_frame_label',
+                            text="Recent Activity",
+                            font=("helvetica", 20, 'bold'))
+    log_frame_label.grid(row=0, column=0, padx=20)
+    log_entries = Listbox(log_frame,
+                          name="log_entries_list",
+                          height=22)
+    log_entries.grid(row=1, column=0, pady=5)
 
     # init buttons
-    search_button = Button(button_frame, text="Search", width=3, height=2)
+    search_button = Button(button_frame,
+                           text="Search",
+                           width=3,
+                           height=2,
+                           font=('helvetica', 14, 'bold'))
     search_button.grid(row=0, column=0)
     search_button.bind('<Button-1>', on_search_clicked)
-    io_button = Button(button_frame, text='In/Out', width=3, height=2)
+    io_button = Button(button_frame,
+                       text='In/Out',
+                       width=3,
+                       height=2,
+                       font=('helvetica', 14, 'bold'))
     io_button.grid(row=0, column=1)
     io_button.bind('<Button-1>', on_io_clicked)
-    purchase_button = Button(button_frame, text='Order', width=3, height=2)
+    purchase_button = Button(button_frame,
+                             text='Order',
+                             width=3,
+                             height=2,
+                             font=('helvetica', 14, 'bold'))
     purchase_button.grid(row=0, column=2)
     purchase_button.bind('<Button-1>', on_order_clicked)
 
