@@ -3,6 +3,8 @@
 This script forms both a collection of functions for rendering the menu of the application,
 and the primary executable script, which is to say that the program as a whole should be
 run using this script.
+
+The main dependency is tkinter, which is used for creating the GUI.
 """
 
 from tkinter import *
@@ -21,6 +23,7 @@ def on_search_clicked(event: Event) -> None:
 
 
 def get_search_results(event: Event) -> None:
+    # TODO: write get_search_results
     # get search results into list
     # get reference to results_list
     # dump results into results_list
@@ -75,7 +78,7 @@ def init_menu() -> Tk:
     root = Tk()
     root.title("Library Tool: Oliver Wooding")
     root.configure(bg='black')
-    root.geometry("780x500")
+    root.geometry("780x505")
     root.bind("<<SearchClicked>>", render_search_view, "+")
     root.bind("<<IOClicked>>", render_io_view, "+")
     root.bind("<<OrderClicked>>", render_order_view, "+")
