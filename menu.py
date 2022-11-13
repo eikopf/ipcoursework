@@ -112,5 +112,5 @@ def init_menu() -> Tk:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(filename="DO_NOT_SUBMIT/menu.log", encoding="utf-8", level=0)
+    logging.basicConfig(filename="DO_NOT_SUBMIT/general.log", encoding="utf-8", level=0)
     init_menu().mainloop()

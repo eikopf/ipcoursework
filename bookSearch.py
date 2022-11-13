@@ -5,7 +5,7 @@ and more complex natural language querying wherein strings are parsed for releva
 """
 
 import database as db
-from database import book
+from database import Book
 from datetime import date
 
 INVALID_SEARCH_TERMS: list[str] = ["the",
@@ -94,7 +94,7 @@ def field_queries(s: str) -> dict:
 
 
 # TODO: write fuzzy equivalent to `search_by_field`
-def search_by_field(field: str, value: str) -> list[book]:
+def search_by_field(field: str, value: str) -> list[Book]:
     """Returns a list of the books which have the specified value in the specified field."""
     if field == "id":
         return [db.get_book(int(value))]
@@ -115,7 +115,7 @@ def search_by_field(field: str, value: str) -> list[book]:
 
 
 # TODO: write fuzzy equivalent to `search by query`
-def search_by_query(query: str) -> list[book]:
+def search_by_query(query: str) -> list[Book]:
     """Returns a list of the books which match the given query, based on simple natural language processing."""
     subqueries = field_queries(query)
 
