@@ -102,62 +102,62 @@ def init_menu() -> Tk:
     # init window
     root: Tk = Tk()
     root.title("Library Tool: Oliver Wooding")
-    root.configure(bg='black')
-    root.geometry("785x505")
+    root.configure(bg='#333')
+    root.geometry("810x505")
     root.bind("<<SearchClicked>>", render_search_view)
     root.bind("<<IOClicked>>", render_io_view)
     root.bind("<<OrderClicked>>", render_order_view)
     root.bind("<<LogUpdate>>", update_activity_list)
 
     # init button frame
-    button_frame = Frame(root, width=180, height=60, name="button_frame")
+    button_frame = Frame(root, width=180, height=60, name="button_frame", bg='#fff')
     button_frame.grid(row=0, column=0, padx=10, pady=5)
 
     # init log frame
     log_frame = Frame(root, width=180, height=430, name="log_frame")
     log_frame.grid(row=1, column=0, rowspan=7, padx=10, pady=5)
-    log_frame.configure(bg='purple')
+    log_frame.configure(bg='#6e5494')
     log_frame_label = Label(log_frame,
                             name='log_frame_label',
                             text="Recent Activity",
-                            font=("helvetica", 20, 'bold'))
-    log_frame_label.grid(row=0, column=0, padx=20)
+                            font=("helvetica", 20, 'bold'),
+                            bg='#6e5494')
+    log_frame_label.grid(row=0, column=0, padx=20, pady=5)
     log_entries = scrolledtext.ScrolledText(log_frame,
                                             name='log_frame_content',
                                             wrap='word',
                                             width=25,
                                             height=28)
-    log_entries.grid(row=1, column=0, pady=5)
+    log_entries.grid(row=1, column=0, pady=5, padx=5)
     log_entries.vbar.pack(side=LEFT, fill="y", expand=False)
     root.event_generate("<<LogUpdate>>")
 
     # init buttons
     search_button = Button(button_frame,
                            text="Search",
-                           width=3,
+                           width=4,
                            height=2,
                            font=('helvetica', 15, 'bold'))
     search_button.grid(row=0, column=0)
     search_button.bind('<Button-1>', on_search_clicked)
     io_button = Button(button_frame,
                        text='In/Out',
-                       width=3,
+                       width=4,
                        height=2,
                        font=('helvetica', 15, 'bold'))
     io_button.grid(row=0, column=1)
     io_button.bind('<Button-1>', on_io_clicked)
     purchase_button = Button(button_frame,
                              text='Order',
-                             width=3,
+                             width=4,
                              height=2,
                              font=('helvetica', 15, 'bold'))
     purchase_button.grid(row=0, column=2)
     purchase_button.bind('<Button-1>', on_order_clicked)
 
     # init viewport
-    viewport = Frame(root, width=560, height=490, name="viewport")
+    viewport = Frame(root, width=560, height=490, name="viewport", bg='#4078c0')
     viewport.grid(row=0, column=1, columnspan=4, rowspan=8, padx=5, pady=5)
-    viewport.configure(bg='darkblue')
 
     # set initial viewport to search
     root.event_generate("<<SearchClicked>>")
