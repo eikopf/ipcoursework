@@ -29,14 +29,14 @@ def update_activity_list(event: Event) -> None:
     for log in reversed(logs):
         line: str = f"Member {log[2]} "
         if log[0] == 'OUT':
-            line += f"checked out the book \"{get_book(log[1])[2].title()}\"."
+            line += f"checked out the book \"{get_book(log[1])[2].title()}\""
         elif log[0] == "RESERVE":
-            line += f"reserved the book \"{get_book(log[1])[2].title()}\"."
+            line += f"reserved the book \"{get_book(log[1])[2].title()}\""
         elif log[0] == "RETURN":
             line += f"returned the book \"{get_book(log[1])[2].title()}\""
         else:  # handle DERESERVE
-            line += f"revoked their reservation on the book \"{get_book(log[1])[2].title()}\"."
-        line += '\n\n'
+            line += f"revoked their reservation on the book \"{get_book(log[1])[2].title()}\""
+        line += f' on {log[3]}.\n\n'
         text_box.insert(END, line)
     return None
 
@@ -159,6 +159,8 @@ def init_menu() -> Tk:
     viewport.grid(row=0, column=1, columnspan=4, rowspan=8, padx=5, pady=5)
     viewport.configure(bg='darkblue')
 
+    # set initial viewport to search
+    root.event_generate("<<SearchClicked>>")
     return root
 
 

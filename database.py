@@ -22,7 +22,7 @@ import logging
 Book = tuple[int, str, str, str, int, date]
 
 # log type: action, book id, member id
-Log = tuple[str, int, str]
+Log = tuple[str, int, str, date]
 
 
 def initialize():
@@ -69,7 +69,10 @@ def get_logs() -> list[Log]:
     with open("data_files/logfile.txt", 'r') as log:
         logs = log.readlines()[1:]
 
-    return [(l.split(" ")[0], int(l.split(" ")[1]), l.split(" ")[2]) for l in logs]
+    return [(l.split(" ")[0],
+             int(l.split(" ")[1]),
+             l.split(" ")[2],
+             date(*[int(i) for i in l.split(" ")[3].split('-')])) for l in logs]
 
 
 def get_open_logs() -> list[Log]:
@@ -83,13 +86,13 @@ def get_open_logs() -> list[Log]:
         elif log[0] == "OUT":
             out.append(log)
             try:
-                out.remove(("RESERVE", log[1], log[2]))
+                out.remove(("RESERVE", log[1], log[2], log[3]))
             except ValueError:
                 pass
         elif log[0] == "RETURN":
-            out.remove(("OUT", log[1], log[2]))
+            out.remove(("OUT", log[1], log[2], log[3]))
         else:  # handles DERESERVE
-            out.remove(("RESERVE", log[1], log[2]))
+            out.remove(("RESERVE", log[1], log[2], log[3]))
     return out
 
 
