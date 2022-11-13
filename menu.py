@@ -9,8 +9,8 @@ The main dependency is tkinter, which is used for creating the GUI.
 """
 
 from tkinter import *
-from tkinter import ttk, Tk
-from database import get_logs
+from tkinter import ttk, Tk, scrolledtext
+from database import get_logs, get_book
 import logging
 
 
@@ -23,23 +23,21 @@ def clear_widget(widget: Widget):
 def update_activity_list(event: Event) -> None:
     """Renders the appropriate lines in the
     recent activity section."""
-    listbox: Listbox = event.widget.nametowidget(".log_frame.log_entries_list")
-    listbox.configure(foreground='black')
-    logs = get_logs()[-10:]
-    for log in logs:
-        line = f"member {log[2]} "
-        if log[0] == "OUT":
-            line += f"checked out book {log[1]}."
+    text_box: scrolledtext.ScrolledText = event.widget. \
+        nametowidget(".log_frame.!frame.log_frame_content")
+    logs = get_logs()
+    for log in reversed(logs):
+        line: str = f"Member {log[2]} "
+        if log[0] == 'OUT':
+            line += f"checked out the book \"{get_book(log[1])[2].title()}\"."
         elif log[0] == "RESERVE":
-            line += f"reserved book {log[1]}."
+            line += f"reserved the book \"{get_book(log[1])[2].title()}\"."
         elif log[0] == "RETURN":
-            line += f"returned book {log[1]}."
-        else:
-            line += f"revoked reservation on book {log[1]}."
-
-        out = StringVar(name=line)
-
-        listbox.insert(END, out)
+            line += f"returned the book \"{get_book(log[1])[2].title()}\""
+        else:  # handle DERESERVE
+            line += f"revoked their reservation on the book \"{get_book(log[1])[2].title()}\"."
+        line += '\n\n'
+        text_box.insert(END, line)
     return None
 
 
@@ -124,12 +122,13 @@ def init_menu() -> Tk:
                             text="Recent Activity",
                             font=("helvetica", 20, 'bold'))
     log_frame_label.grid(row=0, column=0, padx=20)
-    log_entries = Listbox(log_frame,
-                          name="log_entries_list",
-                          height=22,
-                          bg='white',
-                          listvariable=Variable(value=[], name="log_list_variable"))
+    log_entries = scrolledtext.ScrolledText(log_frame,
+                                            name='log_frame_content',
+                                            wrap='word',
+                                            width=25,
+                                            height=28)
     log_entries.grid(row=1, column=0, pady=5)
+    log_entries.vbar.pack(side=LEFT, fill="y", expand=False)
     root.event_generate("<<LogUpdate>>")
 
     # init buttons
