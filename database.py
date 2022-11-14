@@ -140,7 +140,7 @@ def get_books_by_genre(genre: str) -> list[Book]:
     books = []
     for entry in entries:
         data = entry.split(';')
-        if data[1] == genre:
+        if genre in data[1]:
             books.append(get_book(int(data[0])))
 
     return books
@@ -157,7 +157,7 @@ def get_books_by_author(author: str) -> list[Book]:
     books = []
     for entry in entries:
         data = entry.split(';')
-        if data[3] == author:
+        if author in data[3]:
             books.append(get_book(int(data[0])))
 
     return books
@@ -174,7 +174,7 @@ def get_books_by_title(title: str) -> list[Book]:
     books = []
     for entry in entries:
         data = entry.split(';')
-        if data[2] == title:
+        if title in data[2]:
             books.append(get_book(int(data[0])))
 
     return books

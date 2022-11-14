@@ -58,12 +58,17 @@ def update_search_results(event: Event) -> None:
     """Renders the appropriate search results into the search view."""
     # TODO: write get_search_results
     entry: Entry = event.widget.nametowidget('.viewport.search_bar')
+    vc: Frame = entry.nametowidget('.viewport')
+
+    frame_name: str = list(filter(lambda key: key.startswith('!frame'), vc.children.keys()))[0]
+    option_menu_name: str = list(filter(lambda key: key.startswith('!optionmenu'), vc.children.keys()))[0]
+
     results_box: ScrolledText = entry\
-        .nametowidget('.viewport.!frame.search_results')
+        .nametowidget(f'.viewport.{frame_name}.search_results')
     option_var: str = entry\
-        .nametowidget('.viewport.!optionmenu')\
+        .nametowidget(f'.viewport.{option_menu_name}')\
         .getvar('option')
-    query: str = entry.get()
+    query: str = entry.get().lower()
 
     books: list[Book] = []
     if option_var == 'title':
@@ -75,7 +80,17 @@ def update_search_results(event: Event) -> None:
     elif option_var == 'nlp':
         books = search_by_query(query)
 
-    print(books)
+    clear_widget(results_box)
+
+    for book in books:
+        # TODO: find a way to pass scrolling data from label to results_box
+        # TODO: cleanly render the labels in a more appealing way
+        result: Label = Label(results_box,
+                              text=str(book),
+                              wraplength=500,
+                              font=('helvetica', 20, 'bold'))
+        results_box.window_create(END, window=result)
+        pass
     # dump results into results_list
     return None
 
