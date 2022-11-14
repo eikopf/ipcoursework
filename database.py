@@ -232,4 +232,5 @@ def get_books_after_date(d: date) -> list[Book]:
 
 
 if __name__ == "__main__":
-    initialize()  # TODO: write test cases for all functions
+    # TODO: write test cases for all functions
+    print(get_books_by_genre('maths'))

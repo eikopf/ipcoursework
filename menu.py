@@ -9,8 +9,15 @@ The main dependency is tkinter, which is used for creating the GUI.
 """
 
 from tkinter import *
-from tkinter import ttk, Tk, scrolledtext
-from database import get_logs, get_book
+from tkinter import ttk, Tk
+from tkinter.scrolledtext import ScrolledText
+from database import get_logs, \
+    get_book, \
+    Book, \
+    get_books_by_title, \
+    get_books_by_author, \
+    get_books_by_genre
+from bookSearch import search_by_query
 import logging
 
 
@@ -23,7 +30,7 @@ def clear_widget(widget: Widget):
 def update_activity_list(event: Event) -> None:
     """Renders the appropriate lines in the
     recent activity section."""
-    text_box: scrolledtext.ScrolledText = event.widget. \
+    text_box: ScrolledText = event.widget. \
         nametowidget(".log_frame.!frame.log_frame_content")
     logs = get_logs()
     for log in reversed(logs):
@@ -35,7 +42,8 @@ def update_activity_list(event: Event) -> None:
         elif log[0] == "RETURN":
             line += f"returned the book \"{get_book(log[1])[2].title()}\""
         else:  # handle DERESERVE
-            line += f"revoked their reservation on the book \"{get_book(log[1])[2].title()}\""
+            line += f"revoked their reservation " \
+                    f"on the book \"{get_book(log[1])[2].title()}\""
         line += f' on {log[3]}.\n\n'
         text_box.insert(END, line)
     return None
@@ -46,10 +54,28 @@ def on_search_clicked(event: Event) -> None:
     event.widget.event_generate("<<SearchClicked>>")
 
 
-def get_search_results(event: Event) -> None:
+def update_search_results(event: Event) -> None:
+    """Renders the appropriate search results into the search view."""
     # TODO: write get_search_results
-    # get search results into list
-    # get reference to results_list
+    entry: Entry = event.widget.nametowidget('.viewport.search_bar')
+    results_box: ScrolledText = entry\
+        .nametowidget('.viewport.!frame.search_results')
+    option_var: str = entry\
+        .nametowidget('.viewport.!optionmenu')\
+        .getvar('option')
+    query: str = entry.get()
+
+    books: list[Book] = []
+    if option_var == 'title':
+        books = get_books_by_title(query)
+    elif option_var == 'author':
+        books = get_books_by_author(query)
+    elif option_var == 'genre':
+        books = get_books_by_genre(query)
+    elif option_var == 'nlp':
+        books = search_by_query(query)
+
+    print(books)
     # dump results into results_list
     return None
 
@@ -59,11 +85,29 @@ def render_search_view(event: Event) -> None:
     logging.debug("switched to search view")
     viewport: Frame = event.widget.nametowidget(".viewport")
     clear_widget(viewport)
-    search_bar = ttk.Entry(viewport, width=59)
-    search_bar.grid(row=0, column=0, padx=5, pady=5)
-    search_bar.bind("<Key>", get_search_results)
-    results_list = Listbox(viewport, width=60, height=26)
-    results_list.grid(row=1, column=0, padx=5, pady=5)
+    search_bar = Entry(viewport,
+                       width=49,
+                       name='search_bar')
+    search_bar.grid(row=0, column=1, padx=5, pady=5)
+    search_bar.bind('<KeyRelease>', update_search_results)
+    search_options = OptionMenu(viewport,
+                                StringVar(name='option'),
+                                'title',
+                                'author',
+                                'genre',
+                                'nlp')
+    search_options.grid(row=0, column=0)
+    search_options.configure(highlightbackground='#6e5494',
+                             font=('helvetica', 13, 'bold'))
+    search_options.config(width=4)
+    search_options.setvar('option', 'title')
+    search_options.bind('<Leave>', update_search_results)
+    search_options.bind('<Enter>', update_search_results)
+    results_list = ScrolledText(viewport,
+                                width=75,
+                                height=32,
+                                name='search_results')
+    results_list.grid(row=1, column=0, columnspan=2, pady=5, padx=5)
 
     return None
 
@@ -110,7 +154,11 @@ def init_menu() -> Tk:
     root.bind("<<LogUpdate>>", update_activity_list)
 
     # init button frame
-    button_frame = Frame(root, width=180, height=60, name="button_frame", bg='#fff')
+    button_frame = Frame(root,
+                         width=180,
+                         height=60,
+                         name="button_frame",
+                         bg='#fff')
     button_frame.grid(row=0, column=0, padx=10, pady=5)
 
     # init log frame
@@ -123,13 +171,12 @@ def init_menu() -> Tk:
                             font=("helvetica", 20, 'bold'),
                             bg='#6e5494')
     log_frame_label.grid(row=0, column=0, padx=20, pady=5)
-    log_entries = scrolledtext.ScrolledText(log_frame,
-                                            name='log_frame_content',
-                                            wrap='word',
-                                            width=25,
-                                            height=28)
+    log_entries = ScrolledText(log_frame,
+                               name='log_frame_content',
+                               wrap='word',
+                               width=25,
+                               height=28)
     log_entries.grid(row=1, column=0, pady=5, padx=5)
-    log_entries.vbar.pack(side=LEFT, fill="y", expand=False)
     root.event_generate("<<LogUpdate>>")
 
     # init buttons
@@ -156,7 +203,11 @@ def init_menu() -> Tk:
     purchase_button.bind('<Button-1>', on_order_clicked)
 
     # init viewport
-    viewport = Frame(root, width=560, height=490, name="viewport", bg='#4078c0')
+    viewport = Frame(root,
+                     width=560,
+                     height=490,
+                     name="viewport",
+                     bg='#4078c0')
     viewport.grid(row=0, column=1, columnspan=4, rowspan=8, padx=5, pady=5)
 
     # set initial viewport to search
