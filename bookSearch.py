@@ -134,9 +134,37 @@ def search_by_query(query: str) -> list[Book]:
     # creates a list of all the book sets with at least one element
     book_sets = list(filter(lambda x: len(x) > 0, [genre_books, title_books, author_books, price_books, date_books]))
 
+    if len(book_sets) == 1:
+        return list(*book_sets)
+    elif len(book_sets) == 0:
+        return []
     # returns a list of all the books which are in every non-zero set
     return list(book_sets[0].intersection(book_sets[1:]))
 
 
+def levenshtein_distance(a: str, b: str) -> int:
+    """Computes the Levenshtein distance between two strings."""
+    if len(b) == 0:
+        return len(a)
+    elif len(a) == 0:
+        return len(b)
+    elif a[0] == b[0]:
+        return levenshtein_distance(a[1:], b[1:])
+    else:
+        return 1 + min(levenshtein_distance(a[1:], b),
+                       levenshtein_distance(a, b[1:]),
+                       levenshtein_distance(a[1:], b[1:]))
+
+
+def levenshtein_sort(query: str, results: list[str]) -> list[str]:
+    """Sorts the given strings using the Levenshtein string metric."""
+    terms = {}
+    for result in results:
+        terms[result] = -levenshtein_distance(query, result)
+
+    return list(reversed(sorted(terms.keys(), key=terms.get)))
+
+
 if __name__ == "__main__":
     print(search_by_field("author", "eugenia cheng"))
+    print(search_by_query('books by eugenia cheng'))

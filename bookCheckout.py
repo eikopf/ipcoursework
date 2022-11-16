@@ -13,7 +13,7 @@ each line (aside from the header) takes the form of ACTION BOOK_ID MEMBER_ID.
 
 import logging
 from database import get_book, get_logs, write_log, \
-    Log, filter_logs_with_id, get_open_logs
+    Log, filter_logs_with_id, get_open_logs, book_id_is_valid
 from re import fullmatch
 
 
@@ -23,14 +23,6 @@ def member_id_is_valid(member_id: str) -> bool:
         return True
     else:
         return False
-
-
-def book_id_is_valid(book_id: int) -> bool:
-    """Determines whether a book exists in `book_info.txt` and returns a bool accordingly."""
-    if get_book(book_id) is None:
-        return False
-    else:
-        return True
 
 
 def get_loaned_book_ids(logs: list[Log]) -> set[int]:

@@ -15,7 +15,7 @@ and the particular fields of each book are separated by semicolons (;). These fi
 """
 
 from datetime import date
-from typing import Union, Optional
+from typing import Union, Optional, Literal
 import logging
 
 # book type: ID, Genre, Title, Author, Purchase Price, Purchase Date
@@ -94,6 +94,37 @@ def get_open_logs() -> list[Log]:
         else:  # handles DERESERVE
             out.remove(("RESERVE", log[1], log[2], log[3]))
     return out
+
+
+def book_id_is_valid(book_id: int) -> bool:
+    """Determines whether a book exists in `book_info.txt` and returns a bool accordingly."""
+    if get_book(book_id) is None:
+        return False
+    else:
+        return True
+
+
+def get_book_status(book_id: int) -> Literal['RESERVED', 'OUT', 'AVAILABLE']:
+    """Returns the status of the given book according to the logfile."""
+    if not book_id_is_valid(book_id):
+        raise IOError
+
+    status = filter_logs_with_id(get_logs(), book_id)
+
+    if len(status) == 0:
+        return 'AVAILABLE'
+
+    status = status[-1][0]
+
+    if status == 'OUT':
+        return 'OUT'
+    elif status == 'RESERVE':
+        return 'RESERVED'
+    elif status == 'RETURN':
+        return 'AVAILABLE'
+    else:
+        return 'AVAILABLE'
+    pass
 
 
 def filter_logs_with_id(logs: list[Log], book_id: int) -> list[Log]:

@@ -9,15 +9,16 @@ The main dependency is tkinter, which is used for creating the GUI.
 """
 
 from tkinter import *
-from tkinter import ttk, Tk
+from tkinter import Tk
 from tkinter.scrolledtext import ScrolledText
 from database import get_logs, \
     get_book, \
     Book, \
     get_books_by_title, \
     get_books_by_author, \
-    get_books_by_genre
-from bookSearch import search_by_query
+    get_books_by_genre, \
+    get_book_status
+from bookSearch import search_by_query, levenshtein_sort
 import logging
 
 
@@ -60,19 +61,26 @@ def update_search_results(event: Event) -> None:
     entry: Entry = event.widget.nametowidget('.viewport.search_bar')
     vc: Frame = entry.nametowidget('.viewport')
 
-    frame_name: str = list(filter(lambda key: key.startswith('!frame'), vc.children.keys()))[0]
-    option_menu_name: str = list(filter(lambda key: key.startswith('!optionmenu'), vc.children.keys()))[0]
+    frame_name: str = list(
+        filter(
+            lambda key: key.startswith('!frame'),
+            vc.children.keys()))[0]
+    option_menu_name: str = list(
+        filter(
+            lambda key: key.startswith('!optionmenu'),
+            vc.children.keys()))[0]
 
-    results_box: ScrolledText = entry\
+    results_box: ScrolledText = entry \
         .nametowidget(f'.viewport.{frame_name}.search_results')
-    option_var: str = entry\
-        .nametowidget(f'.viewport.{option_menu_name}')\
+    option_var: str = entry \
+        .nametowidget(f'.viewport.{option_menu_name}') \
         .getvar('option')
     query: str = entry.get().lower()
 
     books: list[Book] = []
     if option_var == 'title':
         books = get_books_by_title(query)
+        books.sort(key=lambda x: levenshtein_sort(query, x[2]))
     elif option_var == 'author':
         books = get_books_by_author(query)
     elif option_var == 'genre':
@@ -80,18 +88,53 @@ def update_search_results(event: Event) -> None:
     elif option_var == 'nlp':
         books = search_by_query(query)
 
+    if query == "":  # prevents results from appearing if there is no query
+        books = []
+
     clear_widget(results_box)
 
     for book in books:
         # TODO: find a way to pass scrolling data from label to results_box
-        # TODO: cleanly render the labels in a more appealing way
-        result: Label = Label(results_box,
-                              text=str(book),
-                              wraplength=500,
-                              font=('helvetica', 20, 'bold'))
-        results_box.window_create(END, window=result)
-        pass
-    # dump results into results_list
+        major_text = f'{book[2].title()} by {book[3].title()}'
+        minor_text = f'ID: {book[0]}\n' \
+                     f'Genre: {book[1].capitalize()}\n' \
+                     f'Purchase Price: £{book[4]}\n' \
+                     f'Purchase Date: {book[5]}'
+        status = get_book_status(book[0])
+        status_char = status[0]
+
+        result_frame: Frame = Frame(results_box,
+                                    width=75,
+                                    height=30,
+                                    bg='#333')
+        major_label: Label = Label(result_frame,
+                                   text=major_text,
+                                   wraplength=300,
+                                   font=('helvetica', 20, 'bold'),
+                                   width=26)
+        major_label.grid(row=0, column=1, padx=5, pady=3)
+        minor_label: Label = Label(result_frame,
+                                   text=minor_text,
+                                   wraplength=500,
+                                   font=('helvetica', 12, 'italic'),
+                                   justify='left')
+        minor_label.grid(row=0, column=2, padx=5, pady=2)
+        status_label: Label = Label(result_frame,
+                                    text=status_char,
+                                    font=('helvetica', 25, 'bold'),
+                                    height=int((minor_label.winfo_height() + major_label.winfo_height())/2),
+                                    width=3)
+        match status:
+            case 'OUT':
+                status_label.config(bg='red')
+            case 'RESERVED':
+                status_label.config(bg='orange')
+            case 'AVAILABLE':
+                status_label.config(bg='green')
+
+        status_label.grid(row=0, column=0)
+
+        results_box.window_create(END, window=result_frame)
     return None
 
 
@@ -102,7 +145,8 @@ def render_search_view(event: Event) -> None:
     clear_widget(viewport)
     search_bar = Entry(viewport,
                        width=49,
-                       name='search_bar')
+                       name='search_bar',
+                       bg='#222')
     search_bar.grid(row=0, column=1, padx=5, pady=5)
     search_bar.bind('<KeyRelease>', update_search_results)
     search_options = OptionMenu(viewport,
@@ -121,7 +165,8 @@ def render_search_view(event: Event) -> None:
     results_list = ScrolledText(viewport,
                                 width=75,
                                 height=32,
-                                name='search_results')
+                                name='search_results',
+                                bg='#222')
     results_list.grid(row=1, column=0, columnspan=2, pady=5, padx=5)
 
     return None
@@ -161,7 +206,7 @@ def init_menu() -> Tk:
     # init window
     root: Tk = Tk()
     root.title("Library Tool: Oliver Wooding")
-    root.configure(bg='#333')
+    root.configure(bg='#222')
     root.geometry("810x505")
     root.bind("<<SearchClicked>>", render_search_view)
     root.bind("<<IOClicked>>", render_io_view)
@@ -190,7 +235,8 @@ def init_menu() -> Tk:
                                name='log_frame_content',
                                wrap='word',
                                width=25,
-                               height=28)
+                               height=28,
+                               bg='#222')
     log_entries.grid(row=1, column=0, pady=5, padx=5)
     root.event_generate("<<LogUpdate>>")
 
