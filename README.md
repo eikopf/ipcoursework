@@ -1,20 +1,11 @@
 # Introduction to Programming Coursework
 #### Oliver Wooding
 
->This project targets Python 3.10+, particularly as this relates to
-> the `typing` library. Additionally, given that this code relies
-> on the `tkinter` module, users on macOS/Linux will need to
-> specifically install `tkinter` independently of Python;
-> for this purpose use the following command with homebrew
-> installed:
-> ```bash
-> brew install python-tk@3.11
->```
+>This project targets Python 3.10+, but has no dependencies other than `matplotlib`
 
 Some pieces of this project that are especially of note:
 - In `bookSearch.py`, I use some quite complicated string parsing so that inputs can be naturalistic.
   - Try an example like `books  by philipp dettmer in non-fiction` to see this in practice.
-- The script that needs to be executed to demonstrate the app in its entirety is `menu.py`.
+- While I can't overstate my hatred for `tkinter`, I am quite proud what I've done with it, especially without being able to use the `class` keyword.
 
-Also, the weird collection of books being used for the 
-data here is from my collection!
+Also, the weird collection of books being used for the data here is from my collection!
