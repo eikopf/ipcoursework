@@ -83,6 +83,7 @@ def update_search_results(event: Event) -> None:
         books.sort(key=lambda x: levenshtein_sort(query, x[2]))
     elif option_var == 'author':
         books = get_books_by_author(query)
+        books.sort(key=lambda x: levenshtein_sort(query, x[3]))
     elif option_var == 'genre':
         books = get_books_by_genre(query)
     elif option_var == 'nlp':
