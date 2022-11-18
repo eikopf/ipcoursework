@@ -21,8 +21,12 @@ import logging
 # book type: ID, Genre, Title, Author, Purchase Price, Purchase Date
 Book = tuple[int, str, str, str, int, date]
 
-# log type: action, book id, member id
-Log = tuple[str, int, str, date]
+Log = tuple[
+    Literal['OUT', 'RETURN', 'RESERVE', 'DERESERVE'],  # action
+    int,  # book ID
+    str,  # member ID
+    date  # date
+]
 
 
 def initialize():
@@ -53,8 +57,6 @@ def write_book(book: Book):
             raise AttributeError
         db.write("\n")
         db.write(book_to_string(book))
-
-    logging.debug("wrote book to database")
 
 
 def write_log(s: str):
@@ -146,7 +148,7 @@ def get_book(book_id: int) -> Optional[Book]:
     with open("data_files/book_info.txt", "r") as db:
         entries = db.readlines()[1:]
 
-    out: Union[list[str], None] = None
+    out: Union[tuple[int, str, str, str, int, date], None] = None
     for entry in entries:
         if int(entry.split(";")[0]) == book_id:
             out = entry.split(";")

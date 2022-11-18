@@ -12,7 +12,7 @@ ID; Genre; Title; Author; Purchase Price; Purchase Date
 11;sci-fi;adrift;rob boffard;6;2022-08-14
 12;fantasy;the bone shard daughter;andrea stewart;5;2022-05-14
 13;sci-fi;autonomous;annalee newitz;5;2022-07-14
-14;non-fiction;special relativity and classical field theory: the theoretical minimum;leonard susskind;2022-04-17
+14;non-fiction;special relativity and classical field theory: the theoretical minimum;leonard susskind;13;2022-04-17
 15;music;hollow knight piano collections;christopher larkin;25;2022-11-07
 16;music;celeste piano collections;lena raine;25;2022-11-07
 17;classics;the song of achilles;madeline miller;37;2021-11-21
@@ -32,3 +32,64 @@ ID; Genre; Title; Author; Purchase Price; Purchase Date
 31;maths;x + y;eugenia cheng;18;2019-11-11
 32;maths;surreal numbers;donald knuth;14;2020-12-14
 33;maths;surreal numbers;donald knuth;14;2021-12-15
+34;sci-fi;a closed and common orbit;becky chambers;13;2019-08-23
+35;fantasy;a court of thorns and roses;sarah maas;17;2018-07-06
+36;sci-fi;a memory called empire;arkady martine;20;2022-03-03
+37;sci-fi;a prayer for the crown-shy;becky chambers;13;2021-04-13
+38;sci-fi;a psalm for the wild-built;becky chambers;13;2021-07-27
+39;sci-fi;all systems red;martha wells;9;2022-01-18
+40;sci-fi;artificial condition;martha wells;9;2022-01-19
+41;fantasy;brisingr;christopher paolini;17;2016-05-03
+42;classics;circe;madeline miller;23;2021-05-07
+43;fantasy;clockwork angel;cassandra clare;12;2022-08-23
+44;fantasy;clockwork princess;cassandra clare;12;2022-08-25
+45;sci-fi;cytonic;brandon sanderson;24;2021-09-12
+46;fantasy;dark rise;c.s. pacat;25;2022-01-07
+47;non-fiction;designing games: a guide to engineering experiences;tynan sylvester;31;2021-05-22
+48;sci-fi;divergent;veronica roth;13;2021-04-06
+49;non-fiction;dr karl's brain food;karl kruszelnicki;19;2015-03-03
+50;sci-fi;elder race;adrian tchaikovsky;13;2017-04-30
+51;fantasy;eldest;christopher paolini;24;2017-08-18
+52;fantasy;eragon;christopher paolini;20;2018-12-24
+53;sci-fi;exit strategy;martha wells;10;2013-05-19
+54;non-fiction;firmament: the hidden science of weather, climate change and the air that surrounds us;simon clark;25;2022-05-06
+55;non-fiction;humble pi: a comedy of maths errors;matt parker;13;2021-07-17
+56;fantasy;inheritance;christopher paolini;17;2021-08-24
+57;fantasy;oathbringer;brandon sanderson;20;2022-04-06
+58;sci-fi;phoenix extravagant;yoon ha-lee;14;2022-05-06
+59;sci-fi;plutoshine;lucy kissick;23;2022-03-01
+60;sci-fi;project hail mary;andy weir;20;2016-12-04
+61;non-fiction;quantum: a guide for the perplexed;jim al-khalili;13;2019-04-15
+62;sci-fi;record of a spaceborn few;becky chambers;13;2018-05-14
+63;sci-fi;rogue protocol;martha wells;9;2017-04-10
+64;sci-fi;skyward;brandon sanderson;24;2019-03-02
+65;sci-fi;sleeping giants;sylvain neuvel;16;2017-06-20
+66;sci-fi;stars and bones;gareth powell;21;2018-04-21
+67;sci-fi;starsight;brandon sanderson;24;2021-08-12
+68;maths;symmetry and the monster;mark ronan;21;2018-03-06
+69;sci-fi;the darkness outside us;eliot schrefer;26;2021-02-14
+70;fantasy;the fellowship of the ring;j.r.r tolkien;22;2012-04-05
+71;sci-fi;the fifth science;exurb1a;15;2017-09-06
+72;sci-fi;the galaxy, and the ground within;becky chambers;17;2018-11-16
+73;sci-fi;the hitchhiker's guide to the galaxy;douglas adams;14;2019-10-07
+74;fantasy;the hunger of the gods;john gwynne;22;2018-08-20
+75;non-fiction;the joy of science;jim al-khalili;20;2022-10-29
+76;maths;the joy of x;steven strogatz;7;2017-03-27
+77;fantasy;the lightning thief;rick riordan;14;2009-05-26
+78;sci-fi;the long way to a small, angry planet;becky chambers;17;2015-09-28
+79;fantasy;the priory of the orange tree;samantha shannon;27;2019-07-27
+80;fantasy;the shadow of the gods;john gwynne;23;2022-10-11
+81;non-fiction;the silk roads: a new history of the world;peter frankopan;13;2021-07-23
+82;fantasy;the son of neptune;rick riordan;14;2011-07-28
+83;fantasy;the sword of summer;rick riordan;17;2019-11-06
+84;fantasy;the two towers;j.r.r tolkien;23;2006-05-17
+85;non-fiction;the universe speaks in numbers;graham farmelo;17;2019-04-08
+86;fantasy;the way of kings;brandon sanderson;22;2018-06-26
+87;sci-fi;there is no antimemetics division;qntm;9;2017-05-15
+88;sci-fi;to be taught, if fortunate;becky chambers;14;2015-09-19
+89;sci-fi;to hold up the sky;cixin liu;20;2020-04-27
+90;sci-fi;to sleep in a sea of stars;christopher paolini;30;2022-06-30
+91;fantasy;warbreaker;brandon sanderson;13;2014-04-14
+92;sci-fi;winter's orbit;evarina maxwell;15;2019-07-25
+93;fantasy;words of radiance;brandon sanderson;24;2019-03-20
+94:fantasy;seeker;arwen dayton;21;2015-06-17

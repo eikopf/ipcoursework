@@ -13,7 +13,8 @@ each line (aside from the header) takes the form of ACTION BOOK_ID MEMBER_ID.
 
 import logging
 from database import get_book, get_logs, write_log, \
-    Log, filter_logs_with_id, get_open_logs, book_id_is_valid
+    Log, filter_logs_with_id, get_open_logs, book_id_is_valid, \
+    get_book_status
 from re import fullmatch
 
 
@@ -47,19 +48,22 @@ def get_reserved_book_ids(logs: list[Log]) -> set[int]:
     return out
 
 
-def check_out(book_id: int, member_id: str):  # TODO: reconfigure this function to deal with reservations correctly
+def check_out(book_id: int, member_id: str):
     """Checks a book out and writes the relevant data to the logfile; will
     raise `IOError` if this fails."""
     logging.debug(f'checkout called with book_id: {book_id}, '
                   f'member_id: {member_id}')
 
-    checkout_allowed = member_id_is_valid(member_id) and \
-                       book_id_is_valid(book_id) and \
-                       book_id not in get_loaned_book_ids(get_logs()) and \
-                       book_id not in get_reserved_book_ids(get_logs())
+    checkout_allowed = (member_id_is_valid(member_id) and
+                        book_id_is_valid(book_id) and
+                        book_id not in get_loaned_book_ids(get_logs())) and \
+                       (book_id not in get_reserved_book_ids(get_logs()) or
+                        filter_logs_with_id(get_logs(),
+                                            book_id)[-1][2] == member_id
+                        )
 
     if checkout_allowed:
-        write_log(f"OUT {str(book_id)} {member_id}")
+        write_log(f"OUT {str(book_id)} {member_id} {get_book(book_id)[-1]}")
     else:
         raise IOError({"book_id": book_id,
                        "member_id": member_id,
@@ -102,14 +106,15 @@ def dereserve(book_id: int):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(filename="DO_NOT_SUBMIT/general.log", encoding="utf-8", level=0)
-
     print("tests for member_id_is_valid:")
     print(f"0000: {member_id_is_valid('0000')}")
     print(f'9999: {member_id_is_valid("9999")}')
     print(f'70001: {member_id_is_valid("70001")}')
     print(f'1234: {member_id_is_valid("1234")}')
     print(f'372: {member_id_is_valid("372")}', "\n")
+    print(f'abc: {member_id_is_valid("abc")}', "\n")
+    print(f'a323: {member_id_is_valid("a323")}', "\n")
+    print(f'0i34: {member_id_is_valid("0o34")}', "\n")
 
     print("tests for book_id_is_valid:")
     print(f"-1: {book_id_is_valid(-1)}")

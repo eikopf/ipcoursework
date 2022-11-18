@@ -21,6 +21,17 @@ from database import get_logs, \
 from bookSearch import search_by_query, levenshtein_sort
 import logging
 
+PALETTE: dict[str, str] = {
+    'grey': '#333',
+    'blue': '#4078c0',
+    'purple': '#6e5494',
+    'dark_grey': '#222'
+}
+
+# track specific books to be used in the In/Out window
+book_selection: list[Book] = []
+user_selection: list[Book] = []
+
 
 def clear_widget(widget: Widget):
     """Destroys all the children of the given widget."""
@@ -57,7 +68,6 @@ def on_search_clicked(event: Event) -> None:
 
 def update_search_results(event: Event) -> None:
     """Renders the appropriate search results into the search view."""
-    # TODO: write get_search_results
     entry: Entry = event.widget.nametowidget('.viewport.search_bar')
     vc: Frame = entry.nametowidget('.viewport')
 
@@ -123,7 +133,7 @@ def update_search_results(event: Event) -> None:
         status_label: Label = Label(result_frame,
                                     text=status_char,
                                     font=('helvetica', 25, 'bold'),
-                                    height=int((minor_label.winfo_height() + major_label.winfo_height())/2),
+                                    height=int((minor_label.winfo_height() + major_label.winfo_height()) / 2),
                                     width=3)
         match status:
             case 'OUT':
@@ -184,6 +194,76 @@ def render_io_view(event: Event) -> None:
     logging.debug("switched to io view")
     viewport: Frame = event.widget.nametowidget(".viewport")
     clear_widget(viewport)
+
+    selection_frame = Frame(viewport,
+                            name='selection_frame',
+                            bg=PALETTE['blue'])
+    selection_frame.grid(row=0, column=0, pady=5, padx=5)
+    selection_box = ScrolledText(selection_frame,
+                                 name='selection_box',
+                                 bg='#222',
+                                 width=40,
+                                 height=32)
+    selection_box.grid(row=1, column=0, padx=5, pady=5)
+    selection_box_label = Label(selection_frame,
+                                text='Selection',
+                                font=('helvetica', 20, 'bold'),
+                                width=20)
+    selection_box_label.grid(row=0, column=0)
+    button_frame = Frame(viewport,
+                         name='button_frame',
+                         bg=PALETTE['blue'])
+    button_frame.grid(row=0, column=1, padx=5)
+    add_button = Button(button_frame,
+                        width=2,
+                        text='Add',
+                        font=('helvetica', 15, 'bold'))
+    add_button.grid(row=0, column=0, pady=5, padx=5)
+    add_entry = Entry(button_frame, width=15)
+    add_entry.grid(row=0, column=1, pady=5, padx=7)
+    upper_spacer_frame = Frame(button_frame,
+                               height=25,
+                               bg=PALETTE['blue'])
+    upper_spacer_frame.grid(row=1, column=0, columnspan=2)
+    reserve_button = Button(button_frame,
+                            text='Reserve',
+                            font=('helvetica', 15, 'bold'),
+                            width=15)
+    reserve_button.grid(row=2, column=0, columnspan=2)
+    reserve_all_button = Button(button_frame,
+                                text='Reserve All',
+                                font=('helvetica', 15, 'bold'),
+                                width=15)
+    reserve_all_button.grid(row=3, column=0, columnspan=2)
+    checkout_button = Button(button_frame,
+                             text='Checkout',
+                             font=('helvetica', 15, 'bold'),
+                             width=15)
+    checkout_button.grid(row=4, column=0, columnspan=2)
+    checkout_all_button = Button(button_frame,
+                                 text='Checkout All',
+                                 font=('helvetica', 15, 'bold'),
+                                 width=15)
+    checkout_all_button.grid(row=5, column=0, columnspan=2)
+    return_button = Button(button_frame,
+                           text='Return',
+                           font=('helvetica', 15, 'bold'),
+                           width=15)
+    return_button.grid(row=6, column=0, columnspan=2)
+    return_all_button = Button(button_frame,
+                               text='Return All',
+                               font=('helvetica', 15, 'bold'),
+                               width=15)
+    return_all_button.grid(row=7, column=0, columnspan=2)
+    lower_spacer_frame = Frame(button_frame,
+                               height=40,
+                               bg=PALETTE['blue'])
+    lower_spacer_frame.grid(row=8, column=0, columnspan=2)
+    results_box = Label(button_frame,
+                        width=20,
+                        height=7,
+                        bg=PALETTE['grey'])
+    results_box.grid(row=9, column=0, columnspan=2, pady=5)
     return None
 
 
@@ -207,7 +287,7 @@ def init_menu() -> Tk:
     # init window
     root: Tk = Tk()
     root.title("Library Tool: Oliver Wooding")
-    root.configure(bg='#222')
+    root.configure(bg=PALETTE['dark_grey'])
     root.geometry("810x505")
     root.bind("<<SearchClicked>>", render_search_view)
     root.bind("<<IOClicked>>", render_io_view)
