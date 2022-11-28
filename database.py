@@ -16,13 +16,14 @@ and the particular fields of each book are separated by semicolons (;). These fi
 
 from datetime import date
 from typing import Union, Optional, Literal
+from re import fullmatch
 import logging
 
 # book type: ID, Genre, Title, Author, Purchase Price, Purchase Date
 Book = tuple[int, str, str, str, int, date]
 
 Log = tuple[
-    Literal['OUT', 'RETURN', 'RESERVE', 'DERESERVE'],  # action
+    str,  # action
     int,  # book ID
     str,  # member ID
     date  # date
@@ -46,6 +47,11 @@ def book_to_string(book: Book) -> str:
     return ';'.join(s)
 
 
+def book_entry_is_valid(entry: str) -> bool:
+    """Validates that a particular entry in the database is valid."""
+    return bool(fullmatch(r'/\d+;.+;.+;\d+;\d+-\d+-\d+/gm', entry))
+
+
 def write_book(book: Book):
     """Writes a book to the `book_info.txt` file as a new line at the end of the file."""
     with open("data_files/book_info.txt", 'r') as db:
@@ -54,7 +60,7 @@ def write_book(book: Book):
 
     with open("data_files/book_info.txt", 'a') as db:
         if book[0] in ids:
-            raise AttributeError
+            raise IOError({'book': book, 'lines': lines, 'ids': ids})
         db.write("\n")
         db.write(book_to_string(book))
 
@@ -265,5 +271,4 @@ def get_books_after_date(d: date) -> list[Book]:
 
 
 if __name__ == "__main__":
-    # TODO: write test cases for all functions
     print(get_books_by_genre('maths'))

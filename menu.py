@@ -11,13 +11,16 @@ The main dependency is tkinter, which is used for creating the GUI.
 from tkinter import *
 from tkinter import Tk
 from tkinter.scrolledtext import ScrolledText
+from types import NoneType
+
 from database import get_logs, \
     get_book, \
     Book, \
     get_books_by_title, \
     get_books_by_author, \
     get_books_by_genre, \
-    get_book_status
+    get_book_status, \
+    book_id_is_valid
 from bookSearch import search_by_query, levenshtein_sort
 import logging
 
@@ -29,8 +32,8 @@ PALETTE: dict[str, str] = {
 }
 
 # track specific books to be used in the In/Out window
-book_selection: list[Book] = []
-user_selection: list[Book] = []
+total_selection: set[Book] = set()
+specific_selection: Book | None = None
 
 
 def clear_widget(widget: Widget):
@@ -189,6 +192,108 @@ def on_io_clicked(event: Event) -> None:
     return None
 
 
+def add_to_selection(book_id: int) -> None:
+    """Assumes that the input is valid, and adds a book to the selection."""
+    total_selection.add(get_book(book_id))
+    return None
+
+
+def remove_from_selection(book_id: int) -> None:
+    """Assumes that the input is valid, and removes a book from the selection."""
+    total_selection.remove(get_book(book_id))
+    return None
+
+
+def add_to_selection_by_entry(event: Event) -> None:
+    """Selects value from the entry box in the In/Out window."""
+    entry_text: str = event \
+        .widget \
+        .nametowidget('.viewport.button_frame.add_entry') \
+        .get()
+
+    results_box: Label = event. \
+        widget. \
+        nametowidget('.viewport.button_frame.results_box')
+
+    try:
+        assert book_id_is_valid(int(entry_text))
+    except (ValueError, AssertionError):
+        results_box.setvar('result_box_content',
+                           f"Tried to add a book with ID: "
+                           f"\'{entry_text}\'.\n\n This process failed.")
+        return None
+
+    if get_book(int(entry_text)) in total_selection:
+        results_box.setvar('result_box_content', f"Tried to add a book with the ID: "
+                                                 f"\'{entry_text}\'.\n\n "
+                                                 f"This book is already in the selection.")
+        return None
+
+    add_to_selection(int(entry_text))
+    results_box.setvar('result_box_content', f"Added a book with the ID: "
+                                             f"\'{entry_text}\'.\n\n This process was successful.")
+    event.widget.event_generate('<<SelectionUpdate>>')
+    return None
+
+
+def remove_from_selection_by_entry(event: Event) -> None:
+    """Removes a book from the selection window based on its ID."""
+    entry_text: str = event \
+        .widget \
+        .nametowidget('.viewport.button_frame.add_entry') \
+        .get()
+
+    results_box: Label = event. \
+        widget. \
+        nametowidget('.viewport.button_frame.results_box')
+
+    try:
+        assert book_id_is_valid(int(entry_text))
+    except (ValueError, AssertionError):
+        results_box.setvar('result_box_content',
+                           f"Tried to remove a book with ID: "
+                           f"\'{entry_text}\'.\n\n This process failed.")
+        return None
+
+    if get_book(int(entry_text)) not in total_selection:
+        results_box.setvar('result_box_content', f"Tried to remove a book with the ID: "
+                                                 f"\'{entry_text}\'.\n\n "
+                                                 f"This book is not in the selection.")
+        return None
+
+    remove_from_selection(int(entry_text))
+    results_box.setvar('result_box_content', f"Removed a book with the ID: "
+                                             f"\'{entry_text}\'.\n\n This process was successful.")
+    event.widget.event_generate('<<SelectionUpdate>>')
+    return None
+
+
+def update_selection_view(event: Event) -> None:
+    """Renders the selection view in the In/Out menu."""
+    selection_content: ScrolledText = event \
+        .widget \
+        .nametowidget('.viewport.selection_frame.!frame.selection_box')
+
+    clear_widget(selection_content)
+
+    # construct a UI element for each book in the selection
+    for book in sorted(total_selection, key=lambda x: x[0]):
+        entry_frame: Frame = Frame(selection_content)
+        id_label: Label = Label(entry_frame,
+                                text=f'ID: {book[0]}',
+                                font=('helvetica', 20, 'bold'),
+                                width=4)
+        id_label.grid(column=0, row=0)
+        title_label: Label = Label(entry_frame,
+                                   text=book[2].title(),
+                                   font=('helvetica', 14, 'bold'),
+                                   wraplength=200,
+                                   width=28)
+        title_label.grid(column=1, row=0)
+        selection_content.window_create(END, window=entry_frame)
+    return None
+
+
 def render_io_view(event: Event) -> None:
     """Renders the checkout/return window in the main viewport."""
     logging.debug("switched to io view")
@@ -198,6 +303,7 @@ def render_io_view(event: Event) -> None:
     selection_frame = Frame(viewport,
                             name='selection_frame',
                             bg=PALETTE['blue'])
+    selection_frame.bind('<<SelectionUpdate>>', update_selection_view)
     selection_frame.grid(row=0, column=0, pady=5, padx=5)
     selection_box = ScrolledText(selection_frame,
                                  name='selection_box',
@@ -215,55 +321,73 @@ def render_io_view(event: Event) -> None:
                          bg=PALETTE['blue'])
     button_frame.grid(row=0, column=1, padx=5)
     add_button = Button(button_frame,
-                        width=2,
-                        text='Add',
-                        font=('helvetica', 15, 'bold'))
-    add_button.grid(row=0, column=0, pady=5, padx=5)
-    add_entry = Entry(button_frame, width=15)
-    add_entry.grid(row=0, column=1, pady=5, padx=7)
+                        width=1,
+                        text='+',
+                        font=('helvetica', 20, 'bold'))
+    add_button.bind('<1>', add_to_selection_by_entry)
+    add_button.grid(row=0, column=0, pady=5, padx=1)
+    remove_button: Button = Button(button_frame,
+                                   width=1,
+                                   text='-',
+                                   font=('helvetica', 20, 'bold'))
+    remove_button.bind('<1>', remove_from_selection_by_entry)
+    remove_button.grid(row=0, column=1, pady=5, padx=1)
+    add_entry = Entry(button_frame,
+                      width=11,
+                      name='add_entry')
+    add_entry.grid(row=0, column=2, pady=5, padx=7)
     upper_spacer_frame = Frame(button_frame,
                                height=25,
                                bg=PALETTE['blue'])
-    upper_spacer_frame.grid(row=1, column=0, columnspan=2)
+    upper_spacer_frame.grid(row=1, column=0, columnspan=3)
     reserve_button = Button(button_frame,
                             text='Reserve',
                             font=('helvetica', 15, 'bold'),
                             width=15)
-    reserve_button.grid(row=2, column=0, columnspan=2)
+    reserve_button.grid(row=2, column=0, columnspan=3)
     reserve_all_button = Button(button_frame,
                                 text='Reserve All',
                                 font=('helvetica', 15, 'bold'),
                                 width=15)
-    reserve_all_button.grid(row=3, column=0, columnspan=2)
+    reserve_all_button.grid(row=3, column=0, columnspan=3)
     checkout_button = Button(button_frame,
                              text='Checkout',
                              font=('helvetica', 15, 'bold'),
                              width=15)
-    checkout_button.grid(row=4, column=0, columnspan=2)
+    checkout_button.grid(row=4, column=0, columnspan=3)
     checkout_all_button = Button(button_frame,
                                  text='Checkout All',
                                  font=('helvetica', 15, 'bold'),
                                  width=15)
-    checkout_all_button.grid(row=5, column=0, columnspan=2)
+    checkout_all_button.grid(row=5, column=0, columnspan=3)
     return_button = Button(button_frame,
                            text='Return',
                            font=('helvetica', 15, 'bold'),
                            width=15)
-    return_button.grid(row=6, column=0, columnspan=2)
+    return_button.grid(row=6, column=0, columnspan=3)
     return_all_button = Button(button_frame,
                                text='Return All',
                                font=('helvetica', 15, 'bold'),
                                width=15)
-    return_all_button.grid(row=7, column=0, columnspan=2)
+    return_all_button.grid(row=7, column=0, columnspan=3)
     lower_spacer_frame = Frame(button_frame,
                                height=40,
-                               bg=PALETTE['blue'])
-    lower_spacer_frame.grid(row=8, column=0, columnspan=2)
+                               bg=PALETTE['blue']
+                               )
+    lower_spacer_frame.grid(row=8, column=0, columnspan=3)
     results_box = Label(button_frame,
                         width=20,
                         height=7,
-                        bg=PALETTE['grey'])
-    results_box.grid(row=9, column=0, columnspan=2, pady=5)
+                        bg=PALETTE['grey'],
+                        name='results_box',
+                        wraplength=160,
+                        font=('helvetica', 15, 'bold'),
+                        textvariable=StringVar(
+                            value='window init',
+                            name='result_box_content'
+                        )
+                        )
+    results_box.grid(row=9, column=0, columnspan=3, pady=5)
     return None
 
 
@@ -289,10 +413,14 @@ def init_menu() -> Tk:
     root.title("Library Tool: Oliver Wooding")
     root.configure(bg=PALETTE['dark_grey'])
     root.geometry("810x505")
+
+    # top-level callbacks
     root.bind("<<SearchClicked>>", render_search_view)
     root.bind("<<IOClicked>>", render_io_view)
     root.bind("<<OrderClicked>>", render_order_view)
     root.bind("<<LogUpdate>>", update_activity_list)
+    root.bind("<<SelectionUpdate>>", update_selection_view)
+    root.bind('<Return>', add_to_selection_by_entry)
 
     # init button frame
     button_frame = Frame(root,
