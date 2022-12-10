@@ -124,7 +124,7 @@ def search_by_query(query: str) -> list[Book]:
     title_books = set(db.get_books_by_title(subqueries["title"]))
     author_books = set(db.get_books_by_author(subqueries["author"]))
     price_books = set(db.get_books_by_price(subqueries["purchase price"]))
-    date_books = set([])
+
     if subqueries["time direction"] is not None:
         if subqueries["time direction"] == "before":
             date_books = set(db.get_books_before_date(subqueries["purchase date"]))
@@ -132,7 +132,7 @@ def search_by_query(query: str) -> list[Book]:
             date_books = set(db.get_books_after_date(subqueries["purchase date"]))
 
     # creates a list of all the book sets with at least one element
-    book_sets = list(filter(lambda x: len(x) > 0, [genre_books, title_books, author_books, price_books, date_books]))
+    book_sets = list(filter(lambda x: len(x) > 0, [genre_books, title_books, author_books, price_books]))
 
     if len(book_sets) == 1:
         return list(*book_sets)

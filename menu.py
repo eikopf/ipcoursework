@@ -7,11 +7,11 @@ as a whole should be run using this script.
 
 The main dependency is tkinter, which is used for creating the GUI.
 """
-
+from datetime import date
 from tkinter import *
 from tkinter import Tk
 from tkinter.scrolledtext import ScrolledText
-from types import NoneType
+from typing import Literal
 
 from database import get_logs, \
     get_book, \
@@ -28,18 +28,70 @@ PALETTE: dict[str, str] = {
     'grey': '#333',
     'blue': '#4078c0',
     'purple': '#6e5494',
-    'dark_grey': '#222'
+    'dark_grey': '#222',
+    'selection_color': '#79667f'
 }
 
 # track specific books to be used in the In/Out window
 total_selection: set[Book] = set()
 specific_selection: Book | None = None
 
+window_state: Literal['search', 'io', 'order'] = 'search'
+
 
 def clear_widget(widget: Widget):
     """Destroys all the children of the given widget."""
     for child in widget.winfo_children():
         child.destroy()
+
+
+def return_handler(event: Event):
+    """Handles all <Return> events."""
+    global window_state
+    match window_state:
+        case 'search':
+            pass
+        case 'io':
+            # get references to objects in the io window
+            entry_text: str = event \
+                .widget \
+                .nametowidget('.viewport.button_frame.add_entry') \
+                .get()
+
+            results_box: Label = event. \
+                widget. \
+                nametowidget('.viewport.button_frame.results_box')
+
+            # check that the ID in the entry is valid
+            try:
+                assert book_id_is_valid(int(entry_text))
+            except (ValueError, AssertionError):
+                results_box.setvar('result_box_content',
+                                   f"Tried to add or remove a book with ID: "
+                                   f"\'{entry_text}\'.\n\n This ID is invalid.")
+                return
+
+            # add or remove the book, based on its status
+            if get_book(int(entry_text)) in total_selection:
+                remove_from_selection(int(entry_text))
+                results_box.setvar('result_box_content',
+                                   f"Removed a book with the ID: "
+                                   f"\'{entry_text}\'.\n\n "
+                                   f"This process was successful.")
+                results_box.event_generate('<<SelectionUpdate>>')
+                return
+            else:
+                add_to_selection(int(entry_text))
+                results_box.setvar('result_box_content',
+                                   f"Added a book with the ID: "
+                                   f"\'{entry_text}\'.\n\n "
+                                   f"This process was successful.")
+                results_box.event_generate('<<SelectionUpdate>>')
+                return
+
+        case 'order':
+            pass
+    return
 
 
 def update_activity_list(event: Event) -> None:
@@ -66,6 +118,8 @@ def update_activity_list(event: Event) -> None:
 
 def on_search_clicked(event: Event) -> None:
     """To be called when the *Search* button is pressed."""
+    global window_state
+    window_state = 'search'
     event.widget.event_generate("<<SearchClicked>>")
 
 
@@ -136,7 +190,11 @@ def update_search_results(event: Event) -> None:
         status_label: Label = Label(result_frame,
                                     text=status_char,
                                     font=('helvetica', 25, 'bold'),
-                                    height=int((minor_label.winfo_height() + major_label.winfo_height()) / 2),
+                                    height=int(
+                                        (minor_label.winfo_height() +
+                                         major_label.winfo_height()
+                                         ) / 2
+                                    ),
                                     width=3)
         match status:
             case 'OUT':
@@ -188,6 +246,8 @@ def render_search_view(event: Event) -> None:
 
 def on_io_clicked(event: Event) -> None:
     """To be called when the *In/Out* button is pressed."""
+    global window_state
+    window_state = 'io'
     event.widget.event_generate("<<IOClicked>>")
     return None
 
@@ -263,9 +323,47 @@ def remove_from_selection_by_entry(event: Event) -> None:
 
     remove_from_selection(int(entry_text))
     results_box.setvar('result_box_content', f"Removed a book with the ID: "
-                                             f"\'{entry_text}\'.\n\n This process was successful.")
+                                             f"\'{entry_text}\'.\n\n "
+                                             "This process was successful.")
     event.widget.event_generate('<<SelectionUpdate>>')
     return None
+
+
+def select_specific_book(event: Event):
+    """Selects a specific book in the IO window. \\
+    The event is always a child of the book in question."""
+    global specific_selection
+    new_id = event.widget.master.children['id_buffer'].get()
+
+    results_box: Label = event. \
+        widget. \
+        nametowidget('.viewport.button_frame.results_box')
+
+    # clear selection color from ui
+    for frame in event.widget.master.master.children.values():
+        frame['background'] = 'systemWindowBackgroundColor'
+        for child in frame.children.values():
+            child['background'] = 'systemWindowBackgroundColor'
+
+    new_selection = get_book(int(new_id))
+
+    # if the user clicks on the selected book, deselect it
+    if new_selection == specific_selection:
+        results_box.setvar('result_box_content',
+                           f"Deselected book with ID {new_id}")
+        specific_selection = None
+        return
+
+    # otherwise, select the new book and update the ui
+    specific_selection = new_selection
+    selected_ui_component: Frame = event.widget.master
+    selected_ui_component['background'] = PALETTE['selection_color']
+    for child in selected_ui_component.children.values():
+        child['background'] = PALETTE['selection_color']
+
+    results_box.setvar('result_box_content',
+                       f"Selected book with ID {new_id}")
+    return
 
 
 def update_selection_view(event: Event) -> None:
@@ -278,18 +376,27 @@ def update_selection_view(event: Event) -> None:
 
     # construct a UI element for each book in the selection
     for book in sorted(total_selection, key=lambda x: x[0]):
-        entry_frame: Frame = Frame(selection_content)
+        # construct parent frame
+        entry_frame: Frame = Frame(selection_content,
+                                   name=f'{book[2]}')
+        id_buffer = Entry(entry_frame, name='id_buffer')
+        id_buffer.config(textvariable=IntVar(id_buffer, book[0]))
+
         id_label: Label = Label(entry_frame,
                                 text=f'ID: {book[0]}',
                                 font=('helvetica', 20, 'bold'),
-                                width=4)
+                                width=4,
+                                name='id_label')
         id_label.grid(column=0, row=0)
+        id_label.bind('<1>', select_specific_book)
         title_label: Label = Label(entry_frame,
                                    text=book[2].title(),
                                    font=('helvetica', 14, 'bold'),
                                    wraplength=200,
-                                   width=28)
+                                   width=28,
+                                   name='title_label')
         title_label.grid(column=1, row=0)
+        title_label.bind('<1>', select_specific_book)
         selection_content.window_create(END, window=entry_frame)
     return None
 
@@ -388,11 +495,14 @@ def render_io_view(event: Event) -> None:
                         )
                         )
     results_box.grid(row=9, column=0, columnspan=3, pady=5)
+    viewport.event_generate('<<SelectionUpdate>>')
     return None
 
 
 def on_order_clicked(event: Event) -> None:
     """To be called when the *Order* button is pressed."""
+    global window_state
+    window_state = 'order'
     event.widget.event_generate("<<OrderClicked>>")
     return None
 
@@ -420,7 +530,7 @@ def init_menu() -> Tk:
     root.bind("<<OrderClicked>>", render_order_view)
     root.bind("<<LogUpdate>>", update_activity_list)
     root.bind("<<SelectionUpdate>>", update_selection_view)
-    root.bind('<Return>', add_to_selection_by_entry)
+    root.bind('<Return>', return_handler)
 
     # init button frame
     button_frame = Frame(root,
@@ -433,7 +543,7 @@ def init_menu() -> Tk:
     # init log frame
     log_frame = Frame(root, width=180, height=430, name="log_frame")
     log_frame.grid(row=1, column=0, rowspan=7, padx=10, pady=5)
-    log_frame.configure(bg='#6e5494')
+    log_frame.configure(bg=PALETTE['purple'])
     log_frame_label = Label(log_frame,
                             name='log_frame_label',
                             text="Recent Activity",
@@ -464,21 +574,26 @@ def init_menu() -> Tk:
                        font=('helvetica', 15, 'bold'))
     io_button.grid(row=0, column=1)
     io_button.bind('<Button-1>', on_io_clicked)
-    purchase_button = Button(button_frame,
-                             text='Order',
-                             width=4,
-                             height=2,
-                             font=('helvetica', 15, 'bold'))
-    purchase_button.grid(row=0, column=2)
-    purchase_button.bind('<Button-1>', on_order_clicked)
+    order_button = Button(button_frame,
+                          text='Order',
+                          width=4,
+                          height=2,
+                          font=('helvetica', 15, 'bold'))
+    order_button.grid(row=0, column=2)
+    order_button.bind('<Button-1>', on_order_clicked)
 
     # init viewport
     viewport = Frame(root,
                      width=560,
                      height=490,
                      name="viewport",
-                     bg='#4078c0')
-    viewport.grid(row=0, column=1, columnspan=4, rowspan=8, padx=5, pady=5)
+                     bg=PALETTE['blue'])
+    viewport.grid(row=0,
+                  column=1,
+                  columnspan=4,
+                  rowspan=8,
+                  padx=5,
+                  pady=5)
 
     # set initial viewport to search
     root.event_generate("<<SearchClicked>>")

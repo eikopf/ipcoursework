@@ -19,8 +19,14 @@ from typing import Union, Optional, Literal
 from re import fullmatch
 import logging
 
-# book type: ID, Genre, Title, Author, Purchase Price, Purchase Date
-Book = tuple[int, str, str, str, int, date]
+Book = tuple[
+    int,  # ID
+    str,  # Genre
+    str,  # Title
+    str,  # Author
+    int,  # Purchase Price
+    date  # Purchase Date
+]
 
 Log = tuple[
     str,  # action
@@ -52,7 +58,7 @@ def book_entry_is_valid(entry: str) -> bool:
     return bool(fullmatch(r'/\d+;.+;.+;\d+;\d+-\d+-\d+/gm', entry))
 
 
-def write_book(book: Book):
+def write_book(book: Book) -> None:
     """Writes a book to the `book_info.txt` file as a new line at the end of the file."""
     with open("data_files/book_info.txt", 'r') as db:
         lines = db.readlines()
@@ -65,7 +71,7 @@ def write_book(book: Book):
         db.write(book_to_string(book))
 
 
-def write_log(s: str):
+def write_log(s: str) -> None:
     """Writes a log to the logfile and assumes that it is valid."""
     with open("data_files/logfile.txt", 'a') as log:
         log.write(s)
@@ -154,7 +160,7 @@ def get_book(book_id: int) -> Optional[Book]:
     with open("data_files/book_info.txt", "r") as db:
         entries = db.readlines()[1:]
 
-    out: Union[tuple[int, str, str, str, int, date], None] = None
+    out: Book | None = None
     for entry in entries:
         if int(entry.split(";")[0]) == book_id:
             out = entry.split(";")
