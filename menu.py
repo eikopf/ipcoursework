@@ -7,11 +7,10 @@ as a whole should be run using this script.
 
 The main dependency is tkinter, which is used for creating the GUI.
 """
-from datetime import date
 from tkinter import *
 from tkinter import Tk
 from tkinter.scrolledtext import ScrolledText
-from typing import Literal
+from typing import Literal, Optional
 
 from database import get_logs, \
     get_book, \
@@ -21,7 +20,13 @@ from database import get_logs, \
     get_books_by_genre, \
     get_book_status, \
     book_id_is_valid
-from bookSearch import search_by_query, levenshtein_sort
+from bookSearch import levenshtein_sort
+from bookReturn import return_book, return_books
+from bookCheckout import member_id_is_valid, \
+    checkout_book, \
+    checkout_books, \
+    reserve_book, \
+    reserve_books
 import logging
 
 PALETTE: dict[str, str] = {
@@ -34,18 +39,18 @@ PALETTE: dict[str, str] = {
 
 # track specific books to be used in the In/Out window
 total_selection: set[Book] = set()
-specific_selection: Book | None = None
+specific_selection: Optional[Book] = None
 
 window_state: Literal['search', 'io', 'order'] = 'search'
 
 
-def clear_widget(widget: Widget):
+def clear_widget(widget: Widget) -> None:
     """Destroys all the children of the given widget."""
     for child in widget.winfo_children():
         child.destroy()
 
 
-def return_handler(event: Event):
+def return_handler(event: Event) -> None:
     """Handles all <Return> events."""
     global window_state
     match window_state:
@@ -99,6 +104,7 @@ def update_activity_list(event: Event) -> None:
     recent activity section."""
     text_box: ScrolledText = event.widget. \
         nametowidget(".log_frame.!frame.log_frame_content")
+    text_box.delete('1.0', END)
     logs = get_logs()
     for log in reversed(logs):
         line: str = f"Member {log[2]} "
@@ -153,8 +159,6 @@ def update_search_results(event: Event) -> None:
         books.sort(key=lambda x: levenshtein_sort(query, x[3]))
     elif option_var == 'genre':
         books = get_books_by_genre(query)
-    elif option_var == 'nlp':
-        books = search_by_query(query)
 
     if query == "":  # prevents results from appearing if there is no query
         books = []
@@ -225,8 +229,7 @@ def render_search_view(event: Event) -> None:
                                 StringVar(name='option'),
                                 'title',
                                 'author',
-                                'genre',
-                                'nlp')
+                                'genre')
     search_options.grid(row=0, column=0)
     search_options.configure(highlightbackground='#6e5494',
                              font=('helvetica', 13, 'bold'))
@@ -325,6 +328,11 @@ def remove_from_selection_by_entry(event: Event) -> None:
     results_box.setvar('result_box_content', f"Removed a book with the ID: "
                                              f"\'{entry_text}\'.\n\n "
                                              "This process was successful.")
+
+    global specific_selection
+    if get_book(int(entry_text)) == specific_selection:
+        specific_selection = None
+
     event.widget.event_generate('<<SelectionUpdate>>')
     return None
 
@@ -366,6 +374,36 @@ def select_specific_book(event: Event):
     return
 
 
+def select_specific_book_no_callback(book_container: Frame):
+    """Explicit function used to guarantee UI cohesion \\
+    between variations, i.e. between different window variants."""
+    global specific_selection
+
+    new_id = book_container.children['id_buffer'].get()
+
+    results_box: Label = book_container.nametowidget(
+        '.viewport.button_frame.results_box'
+    )
+
+    # clear selection color from ui
+    for frame in book_container.master.children.values():
+        frame['background'] = 'systemWindowBackgroundColor'
+        for child in frame.children.values():
+            child['background'] = 'systemWindowBackgroundColor'
+
+    new_selection = get_book(int(new_id))
+
+    specific_selection = new_selection
+    selected_ui_component: Frame = book_container
+    selected_ui_component['background'] = PALETTE['selection_color']
+    for child in selected_ui_component.children.values():
+        child['background'] = PALETTE['selection_color']
+
+    results_box.setvar('result_box_content',
+                       f"Selected book with ID {new_id}")
+    return
+
+
 def update_selection_view(event: Event) -> None:
     """Renders the selection view in the In/Out menu."""
     selection_content: ScrolledText = event \
@@ -378,7 +416,9 @@ def update_selection_view(event: Event) -> None:
     for book in sorted(total_selection, key=lambda x: x[0]):
         # construct parent frame
         entry_frame: Frame = Frame(selection_content,
-                                   name=f'{book[2]}')
+                                   name=f'{book[2]}',
+                                   cursor='arrow')
+        # this entry is never rendered, it only contains data
         id_buffer = Entry(entry_frame, name='id_buffer')
         id_buffer.config(textvariable=IntVar(id_buffer, book[0]))
 
@@ -398,7 +438,303 @@ def update_selection_view(event: Event) -> None:
         title_label.grid(column=1, row=0)
         title_label.bind('<1>', select_specific_book)
         selection_content.window_create(END, window=entry_frame)
+
+        global specific_selection
+        if specific_selection is not None and specific_selection[0] == book[0]:
+            select_specific_book_no_callback(entry_frame)
     return None
+
+
+def on_reserve_clicked(event: Event) -> None:
+    """Reserves the book stored in `specific_selection`."""
+    global specific_selection, total_selection
+
+    member_id: str = event.widget.nametowidget(
+        '.viewport.button_frame.!frame.member_id_entry'
+    ).get()
+
+    results_box: Label = event.widget.nametowidget(
+        '.viewport.button_frame.results_box'
+    )
+
+    if specific_selection is None:
+        results_box.setvar('result_box_content',
+                           f"Process failed; "
+                           f"no book was "
+                           f"selected.")
+        return
+
+    if not member_id_is_valid(member_id):
+        results_box.setvar('result_box_content',
+                           f"Process failed; "
+                           f"member ID \"{member_id}\" "
+                           f"is invalid.")
+        return
+
+    try:
+        reserve_book(specific_selection[0], member_id)
+    except (IOError, IndexError):
+        results_box.setvar('result_box_content',
+                           f"Process failed; "
+                           f"{specific_selection[2].title()} "
+                           f"is not available "
+                           f"to reserve. ")
+        return
+
+    total_selection.remove(specific_selection)
+
+    results_box.setvar('result_box_content',
+                       f"Process successful; "
+                       f"{specific_selection[2].title()} "
+                       f"was reserved.")
+
+    specific_selection = None
+
+    # inject updating events
+    event.widget.event_generate(
+        '<<SelectionUpdate>>'
+    )
+    event.widget.event_generate(
+        '<<LogUpdate>>'
+    )
+    return
+
+
+def on_reserve_all_clicked(event: Event) -> None:
+    """Reserves all the books stored in `total_selection`."""
+    global specific_selection, total_selection
+
+    member_id: str = event.widget.nametowidget(
+        '.viewport.button_frame.!frame.member_id_entry'
+    ).get()
+
+    results_box: Label = event.widget.nametowidget(
+        '.viewport.button_frame.results_box'
+    )
+
+    books = total_selection.copy()
+
+    if not member_id_is_valid(member_id):
+        results_box.setvar('result_box_content',
+                           f"Process failed; "
+                           f"member ID \"{member_id}\" "
+                           f"is invalid.")
+        return
+
+    try:
+        reserve_books([book[0] for book in books], member_id)
+    except (IOError, IndexError):
+        results_box.setvar('result_box_content',
+                           f"Process failed; "
+                           f"one or more books "
+                           f"was not available "
+                           f"to reserve.")
+        return
+
+    total_selection = set()
+    specific_selection = None
+
+    results_box.setvar('result_box_content',
+                       f"Process successful; "
+                       f"all books have been "
+                       f"reserved.")
+
+    # inject updating events
+    event.widget.event_generate(
+        '<<SelectionUpdate>>'
+    )
+    event.widget.event_generate(
+        '<<LogUpdate>>'
+    )
+    return
+
+
+def on_checkout_clicked(event: Event) -> None:
+    """Checks out the book stored in `specific_selection`"""
+    global specific_selection, total_selection
+
+    member_id: str = event.widget.nametowidget(
+        '.viewport.button_frame.!frame.member_id_entry'
+    ).get()
+
+    results_box: Label = event.widget.nametowidget(
+        '.viewport.button_frame.results_box'
+    )
+
+    if specific_selection is None:
+        results_box.setvar('result_box_content',
+                           f"Process failed; "
+                           f"no book was "
+                           f"selected.")
+        return
+
+    if not member_id_is_valid(member_id):
+        results_box.setvar('result_box_content',
+                           f"Process failed; "
+                           f"member ID \"{member_id}\" "
+                           f"is invalid.")
+        return
+
+    try:
+        checkout_book(specific_selection[0], member_id)
+    except (IOError, IndexError):
+        results_box.setvar('result_box_content',
+                           f"Process failed; "
+                           f"{specific_selection[2].title()} "
+                           f"is not available "
+                           f"to check out. ")
+        return
+
+    total_selection.remove(specific_selection)
+
+    results_box.setvar('result_box_content',
+                       f"Process successful; "
+                       f"{specific_selection[2].title()} "
+                       f"was checked out.")
+
+    specific_selection = None
+
+    # inject updating events
+    event.widget.event_generate(
+        '<<SelectionUpdate>>'
+    )
+    event.widget.event_generate(
+        '<<LogUpdate>>'
+    )
+    return
+
+
+def on_checkout_all_clicked(event: Event) -> None:
+    """Checks out all the books stored in `total_selection`"""
+    global specific_selection, total_selection
+
+    member_id: str = event.widget.nametowidget(
+        '.viewport.button_frame.!frame.member_id_entry'
+    ).get()
+
+    results_box: Label = event.widget.nametowidget(
+        '.viewport.button_frame.results_box'
+    )
+
+    if not member_id_is_valid(member_id):
+        results_box.setvar('result_box_content',
+                           f"Process failed; "
+                           f"member ID \"{member_id}\" "
+                           f"is invalid.")
+        return
+
+    books = total_selection.copy()
+
+    try:
+        checkout_books([book[0] for book in books], member_id)
+    except (IOError, IndexError):
+        results_box.setvar('result_box_content',
+                           f"Process failed; at "
+                           f"least one of the "
+                           f"selected books is "
+                           f"not available to "
+                           f"be checked out.")
+        return
+
+    # reset selection
+    total_selection = set()
+    specific_selection = None
+
+    results_box.setvar('result_box_content',
+                       f"Process successful; "
+                       f"all books have "
+                       f"been checked out.")
+
+    # inject updating events
+    event.widget.event_generate(
+        '<<SelectionUpdate>>'
+    )
+    event.widget.event_generate(
+        '<<LogUpdate>>'
+    )
+    return
+
+
+def on_return_clicked(event: Event) -> None:
+    """Returns the book stored in `specific_selection`."""
+    global specific_selection, total_selection
+
+    results_box: Label = event.widget.nametowidget(
+        '.viewport.button_frame.results_box'
+    )
+
+    book: Book | None = specific_selection
+
+    if book is None:
+        results_box.setvar('result_box_content',
+                           f"Process failed; no book"
+                           f" was selected.")
+        return
+
+    try:
+        return_book(book[0])
+    except (TypeError, IOError):
+        results_box.setvar('result_box_content',
+                           f"Process failed; the "
+                           f"selected book is "
+                           f"not out.")
+        return
+
+    results_box.setvar('result_box_content',
+                       f"Process successful; "
+                       f"{specific_selection[2].title()} "
+                       f"was returned.")
+
+    # remove the book from the selection
+    total_selection.remove(book)
+    specific_selection = None
+
+    # inject updating events
+    event.widget.event_generate(
+        '<<SelectionUpdate>>'
+    )
+    event.widget.event_generate(
+        '<<LogUpdate>>'
+    )
+    return
+
+
+def on_return_all_clicked(event: Event) -> None:
+    """Returns all the books stored in `total_selection`."""
+    global total_selection, specific_selection
+
+    results_box: Label = event.widget.nametowidget(
+        '.viewport.button_frame.results_box'
+    )
+
+    books = total_selection.copy()
+
+    try:
+        return_books([book[0] for book in books])
+    except (IOError, IndexError):
+        results_box.setvar('result_box_content',  # TODO: make this a more useful error message
+                           f"Process failed; at "
+                           f"least one of the "
+                           f"selected books is "
+                           f"not out.")
+        return
+
+    total_selection = set()
+    specific_selection = None
+
+    results_box.setvar('result_box_content',
+                       f"Process successful; "
+                       f"all books have "
+                       f"been returned.")
+
+    # inject updating events
+    event.widget.event_generate(
+        '<<SelectionUpdate>>'
+    )
+    event.widget.event_generate(
+        '<<LogUpdate>>'
+    )
+    return
 
 
 def render_io_view(event: Event) -> None:
@@ -416,37 +752,65 @@ def render_io_view(event: Event) -> None:
                                  name='selection_box',
                                  bg='#222',
                                  width=40,
-                                 height=32)
+                                 height=32,
+                                 cursor='arrow')
     selection_box.grid(row=1, column=0, padx=5, pady=5)
     selection_box_label = Label(selection_frame,
                                 text='Selection',
                                 font=('helvetica', 20, 'bold'),
-                                width=20)
+                                width=20,
+                                bg=PALETTE['blue'])
     selection_box_label.grid(row=0, column=0)
     button_frame = Frame(viewport,
                          name='button_frame',
                          bg=PALETTE['blue'])
+
+    # construct right-side container
     button_frame.grid(row=0, column=1, padx=5)
+
+    # construct the button called '+'
     add_button = Button(button_frame,
                         width=1,
                         text='+',
                         font=('helvetica', 20, 'bold'))
     add_button.bind('<1>', add_to_selection_by_entry)
     add_button.grid(row=0, column=0, pady=5, padx=1)
+
+    # construct the button called '-'
     remove_button: Button = Button(button_frame,
                                    width=1,
                                    text='-',
                                    font=('helvetica', 20, 'bold'))
     remove_button.bind('<1>', remove_from_selection_by_entry)
     remove_button.grid(row=0, column=1, pady=5, padx=1)
+
+    # construct the uppermost entry, for IDs
     add_entry = Entry(button_frame,
                       width=11,
                       name='add_entry')
     add_entry.grid(row=0, column=2, pady=5, padx=7)
-    upper_spacer_frame = Frame(button_frame,
+
+    # construct the lower entry, for member IDs
+    member_entry_frame = Frame(button_frame,
                                height=25,
                                bg=PALETTE['blue'])
-    upper_spacer_frame.grid(row=1, column=0, columnspan=3)
+    member_entry_frame.grid(row=1, column=0, columnspan=3)
+    member_label: Label = Label(member_entry_frame,
+                                name='member_id_label',
+                                font=('helvetica', 15, 'bold'),
+                                bg=PALETTE['blue'])
+    member_label.config(textvariable=StringVar(member_label, 'Member ID: '))
+    member_label.grid(row=0, column=0, padx=5, pady=5)
+    member_entry: Entry = Entry(member_entry_frame,
+                                name='member_id_entry',
+                                width=11)
+    member_entry.grid(row=0, column=1, pady=5)
+    member_frame_lower_spacer: Frame = Frame(member_entry_frame,
+                                             height=35,
+                                             bg=PALETTE['blue'])
+    member_frame_lower_spacer.grid(row=1, columnspan=2)
+
+    # construct action buttons
     reserve_button = Button(button_frame,
                             text='Reserve',
                             font=('helvetica', 15, 'bold'),
@@ -478,10 +842,12 @@ def render_io_view(event: Event) -> None:
                                width=15)
     return_all_button.grid(row=7, column=0, columnspan=3)
     lower_spacer_frame = Frame(button_frame,
-                               height=40,
+                               height=35,
                                bg=PALETTE['blue']
                                )
     lower_spacer_frame.grid(row=8, column=0, columnspan=3)
+
+    # construct results box for success/failure messages
     results_box = Label(button_frame,
                         width=20,
                         height=7,
@@ -495,6 +861,15 @@ def render_io_view(event: Event) -> None:
                         )
                         )
     results_box.grid(row=9, column=0, columnspan=3, pady=5)
+
+    # side button bindings
+    reserve_button.bind('<1>', on_reserve_clicked)
+    reserve_all_button.bind('<1>', on_reserve_all_clicked)
+    checkout_button.bind('<1>', on_checkout_clicked)
+    checkout_all_button.bind('<1>', on_checkout_all_clicked)
+    return_button.bind('<1>', on_return_clicked)
+    return_all_button.bind('<1>', on_return_all_clicked)
+
     viewport.event_generate('<<SelectionUpdate>>')
     return None
 

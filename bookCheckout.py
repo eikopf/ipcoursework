@@ -1,9 +1,9 @@
 """Checkout and Reservation Tools
 
-This script provides functions to deal with checking out and reserving
+This script provides functions to deal with checking out and reserving \\
 books by members with valid IDs.
 
-This script also handles much of the detail of writing to the logfile, where
+This script also handles much of the detail of writing to the logfile, where \\
 each line (aside from the header) takes the form of ACTION BOOK_ID MEMBER_ID.
 
 - ACTION: can be OUT, RETURN, RESERVE, or DERESERVE
@@ -16,6 +16,7 @@ from database import get_book, get_logs, write_log, \
     Log, filter_logs_with_id, get_open_logs, book_id_is_valid, \
     get_book_status
 from re import fullmatch
+from datetime import date
 
 
 def member_id_is_valid(member_id: str) -> bool:
@@ -48,7 +49,7 @@ def get_reserved_book_ids(logs: list[Log]) -> set[int]:
     return out
 
 
-def check_out(book_id: int, member_id: str):
+def checkout_book(book_id: int, member_id: str):
     """Checks a book out and writes the relevant data to the logfile; will
     raise `IOError` if this fails."""
     logging.debug(f'checkout called with book_id: {book_id}, '
@@ -63,14 +64,20 @@ def check_out(book_id: int, member_id: str):
                         )
 
     if checkout_allowed:
-        write_log(f"OUT {str(book_id)} {member_id} {get_book(book_id)[-1]}")
+        write_log(f"\nOUT {str(book_id)} {member_id} {date.today()}")
     else:
         raise IOError({"book_id": book_id,
                        "member_id": member_id,
                        "checkout_allowed": checkout_allowed})
 
 
-def reserve(book_id: int, member_id: str):
+def checkout_books(book_ids: list[int], member_id: str):
+    """Checks a list of books out with repeated calls to `checkout_book`."""
+    for id in book_ids:
+        checkout_book(id, member_id)
+
+
+def reserve_book(book_id: int, member_id: str):
     """Reserves a book for the given member and writes the
     relevant data to the logfile; raises `IOError` if
     this fails."""
@@ -79,15 +86,22 @@ def reserve(book_id: int, member_id: str):
 
     reservation_allowed = member_id_is_valid(member_id) and \
                           book_id_is_valid(book_id) and \
-                          book_id in get_loaned_book_ids(get_logs()) and \
+                          book_id not in get_loaned_book_ids(get_logs()) and \
                           book_id not in get_reserved_book_ids(get_logs())
 
     if reservation_allowed:
-        write_log(f"RESERVE {str(book_id)} {member_id}")
+        write_log(f"\nRESERVE {str(book_id)} {member_id} {date.today()}")
     else:
         raise IOError({"book_id": book_id,
                        "member_id": member_id,
                        "reservation_allowed": reservation_allowed})
+
+
+def reserve_books(book_ids: list[int], member_id: str):
+    """Reserves a list of book with repeated calls to `reserve_book`."""
+    for id in book_ids:
+        reserve_book(id, member_id)
+    pass
 
 
 def dereserve(book_id: int):
@@ -98,7 +112,7 @@ def dereserve(book_id: int):
 
     for log in open_logs_for_id:
         if log[0] == "RESERVE":
-            write_log(f"DERESERVE {book_id} {log[2]}")
+            write_log(f"\nDERESERVE {book_id} {log[2]} {date.today()}")
             return
 
     raise IOError({"open_logs_for_id": open_logs_for_id,
@@ -126,7 +140,7 @@ if __name__ == '__main__':
     print(f"set of reserved book IDs: {get_reserved_book_ids(get_logs())}")
 
     try:
-        check_out(17, "1976")
+        checkout_book(17, "1976")
         print(f'checkout book_id: 17, member_id: "1976", : success')
     except IOError as e:
         print(f'checkout book_id: 17, member_id: "1976", : failure -> {e}')

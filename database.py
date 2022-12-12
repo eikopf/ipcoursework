@@ -104,9 +104,15 @@ def get_open_logs() -> list[Log]:
             except ValueError:
                 pass
         elif log[0] == "RETURN":
-            out.remove(("OUT", log[1], log[2], log[3]))
+            try:
+                out.remove(("RESERVE", log[1], log[2], log[3]))
+            except ValueError:
+                pass
         else:  # handles DERESERVE
-            out.remove(("RESERVE", log[1], log[2], log[3]))
+            try:
+                out.remove(("RESERVE", log[1], log[2], log[3]))
+            except ValueError:
+                pass
     return out
 
 
