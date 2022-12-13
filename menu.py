@@ -27,6 +27,11 @@ from bookCheckout import member_id_is_valid, \
     checkout_books, \
     reserve_book, \
     reserve_books
+from bookSelect import get_order_menu_multiplot
+from matplotlib.backends.backend_tkagg import (
+    FigureCanvasTkAgg, NavigationToolbar2Tk)
+from matplotlib.backend_bases import key_press_handler
+from matplotlib.figure import Figure
 import logging
 
 PALETTE: dict[str, str] = {
@@ -887,7 +892,69 @@ def render_order_view(event: Event) -> None:
     logging.debug("switched to order view")
     viewport: Frame = event.widget.nametowidget(".viewport")
     clear_widget(viewport)
-    return None
+
+    # initialize top-level frames
+    canvas_frame: Frame = Frame(viewport,
+                                name="canvas_frame",
+                                bg=PALETTE['blue'])
+    canvas_frame.grid(row=0, column=0)
+    menu_frame: Frame = Frame(viewport,
+                              name="menu_frame",
+                              bg=PALETTE['blue'])
+    menu_frame.grid(row=0, column=1)
+
+    # initialize budget entry components in menu_frame
+    budget_label: Label = Label(menu_frame,
+                                text='Budget:',
+                                font=('helvetica', 18, 'bold'),
+                                bg=PALETTE['blue'])
+    budget_label.grid(row=0, column=0, padx=3)
+    budget_entry: Entry = Entry(menu_frame,
+                                width=10,
+                                name='budget_entry')
+    budget_entry.grid(row=0, column=1, pady=5, padx=3)
+
+    # initialize option components in menu_frame
+    just_authors_option: Checkbutton = Checkbutton(menu_frame,
+                                                   text='Just Authors',
+                                                   font=('helvetica', 10),
+                                                   bg=PALETTE['blue'],
+                                                   name='just_authors_option')
+    just_authors_option.grid(row=1, column=1, pady=3, sticky=W)
+    just_genres_option: Checkbutton = Checkbutton(menu_frame,
+                                                  text='Just Genres',
+                                                  font=('helvetica', 10),
+                                                  bg=PALETTE['blue'],
+                                                  name='just_genres_option')
+    just_genres_option.grid(row=2, column=1, pady=3, sticky=W)
+    rough_budget_option: Checkbutton = Checkbutton(menu_frame,
+                                                   text='Rough Budget',
+                                                   font=('helvetica', 10),
+                                                   bg=PALETTE['blue'],
+                                                   name='rough_budget_option')
+    rough_budget_option.grid(row=3, column=1, pady=3, sticky=W)
+    lower_spacer: Frame = Frame(menu_frame,
+                                height=320,
+                                bg=PALETTE['blue'])
+    lower_spacer.grid(row=4, column=0, columnspan=2)
+
+    # initializing the confirm button
+    confirm_button: Button = Button(menu_frame,
+                                    text='Get Recommendations',
+                                    font=('helvetica', 15, 'bold'))
+    confirm_button.grid(row=5, column=0, columnspan=2, padx=3, pady=5)
+
+    # initializing the canvas section
+    canvas = FigureCanvasTkAgg(get_order_menu_multiplot(),
+                               master=canvas_frame)
+    e = Event()
+    e.width = 360
+    e.height = 470
+    canvas.draw()
+    canvas.resize(e)
+    canvas.get_tk_widget().config(width=360, height=470)
+    canvas.get_tk_widget().grid(row=0, column=0)
+    return
 
 
 def init_menu() -> Tk:
