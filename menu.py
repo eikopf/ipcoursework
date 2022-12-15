@@ -7,11 +7,26 @@ as a whole should be run using this script.
 
 The main dependency is tkinter, which is used for creating the GUI.
 """
+import logging
+from time import perf_counter
 from tkinter import *
 from tkinter import Tk
 from tkinter.scrolledtext import ScrolledText
-from typing import Literal, Optional
+from typing import Literal, Optional, Callable
 
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+from bookCheckout import member_id_is_valid, \
+    checkout_book, \
+    checkout_books, \
+    reserve_book, \
+    reserve_books
+from bookReturn import return_book, return_books
+from bookSearch import levenshtein_sort
+from bookSelect import get_logfile_multiplot, \
+    get_database_multiplot, \
+    get_recommendation_multiplot, get_recommendation_data, get_recommendation_string
 from database import get_logs, \
     get_book, \
     Book, \
@@ -20,19 +35,6 @@ from database import get_logs, \
     get_books_by_genre, \
     get_book_status, \
     book_id_is_valid
-from bookSearch import levenshtein_sort
-from bookReturn import return_book, return_books
-from bookCheckout import member_id_is_valid, \
-    checkout_book, \
-    checkout_books, \
-    reserve_book, \
-    reserve_books
-from bookSelect import get_order_menu_multiplot
-from matplotlib.backends.backend_tkagg import (
-    FigureCanvasTkAgg, NavigationToolbar2Tk)
-from matplotlib.backend_bases import key_press_handler
-from matplotlib.figure import Figure
-import logging
 
 PALETTE: dict[str, str] = {
     'grey': '#333',
@@ -46,7 +48,16 @@ PALETTE: dict[str, str] = {
 total_selection: set[Book] = set()
 specific_selection: Optional[Book] = None
 
+# track global state
 window_state: Literal['search', 'io', 'order'] = 'search'
+canvas_function: Callable[[], plt.Figure] = get_database_multiplot
+
+# track recommendation options
+recommendation_options: dict[str, bool] = {
+    'just_authors': False,
+    'just_genres': False,
+    'rough_budget': False
+}
 
 
 def clear_widget(widget: Widget) -> None:
@@ -106,7 +117,7 @@ def return_handler(event: Event) -> None:
 
 def update_activity_list(event: Event) -> None:
     """Renders the appropriate lines in the
-    recent activity section."""
+    **Recent Activity** section."""
     text_box: ScrolledText = event.widget. \
         nametowidget(".log_frame.!frame.log_frame_content")
     text_box.delete('1.0', END)
@@ -128,14 +139,15 @@ def update_activity_list(event: Event) -> None:
 
 
 def on_search_clicked(event: Event) -> None:
-    """To be called when the *Search* button is pressed."""
+    """To be called when the **Search** button is pressed."""
     global window_state
     window_state = 'search'
     event.widget.event_generate("<<SearchClicked>>")
 
 
 def update_search_results(event: Event) -> None:
-    """Renders the appropriate search results into the search view."""
+    """Renders the appropriate search results \\
+    into the **Search** view."""
     entry: Entry = event.widget.nametowidget('.viewport.search_bar')
     vc: Frame = entry.nametowidget('.viewport')
 
@@ -171,7 +183,6 @@ def update_search_results(event: Event) -> None:
     clear_widget(results_box)
 
     for book in books:
-        # TODO: find a way to pass scrolling data from label to results_box
         major_text = f'{book[2].title()} by {book[3].title()}'
         minor_text = f'ID: {book[0]}\n' \
                      f'Genre: {book[1].capitalize()}\n' \
@@ -220,7 +231,7 @@ def update_search_results(event: Event) -> None:
 
 
 def render_search_view(event: Event) -> None:
-    """Renders the search window in the main viewport."""
+    """Renders the **Search** window in the main viewport."""
     logging.debug("switched to search view")
     viewport: Frame = event.widget.nametowidget(".viewport")
     clear_widget(viewport)
@@ -253,7 +264,8 @@ def render_search_view(event: Event) -> None:
 
 
 def on_io_clicked(event: Event) -> None:
-    """To be called when the *In/Out* button is pressed."""
+    """To be called when the **In/Out** \\
+    button is pressed."""
     global window_state
     window_state = 'io'
     event.widget.event_generate("<<IOClicked>>")
@@ -273,7 +285,8 @@ def remove_from_selection(book_id: int) -> None:
 
 
 def add_to_selection_by_entry(event: Event) -> None:
-    """Selects value from the entry box in the In/Out window."""
+    """Selects the value from the \\
+    entry box in the **In/Out** window."""
     entry_text: str = event \
         .widget \
         .nametowidget('.viewport.button_frame.add_entry') \
@@ -343,8 +356,9 @@ def remove_from_selection_by_entry(event: Event) -> None:
 
 
 def select_specific_book(event: Event):
-    """Selects a specific book in the IO window. \\
-    The event is always a child of the book in question."""
+    """Selects a specific book in the **In/Out** window. \\
+    The widget which generates the event is always \\
+    a child of the book in question."""
     global specific_selection
     new_id = event.widget.master.children['id_buffer'].get()
 
@@ -380,8 +394,8 @@ def select_specific_book(event: Event):
 
 
 def select_specific_book_no_callback(book_container: Frame):
-    """Explicit function used to guarantee UI cohesion \\
-    between variations, i.e. between different window variants."""
+    """An explicit variant of `select_specific_book` to ensure that \\
+    the selected book is always rendered appropriately."""
     global specific_selection
 
     new_id = book_container.children['id_buffer'].get()
@@ -410,7 +424,7 @@ def select_specific_book_no_callback(book_container: Frame):
 
 
 def update_selection_view(event: Event) -> None:
-    """Renders the selection view in the In/Out menu."""
+    """Renders the selection view in the **In/Out** menu."""
     selection_content: ScrolledText = event \
         .widget \
         .nametowidget('.viewport.selection_frame.!frame.selection_box')
@@ -687,7 +701,7 @@ def on_return_clicked(event: Event) -> None:
 
     results_box.setvar('result_box_content',
                        f"Process successful; "
-                       f"{specific_selection[2].title()} "
+                       f"{book[2].title()} "
                        f"was returned.")
 
     # remove the book from the selection
@@ -717,7 +731,7 @@ def on_return_all_clicked(event: Event) -> None:
     try:
         return_books([book[0] for book in books])
     except (IOError, IndexError):
-        results_box.setvar('result_box_content',  # TODO: make this a more useful error message
+        results_box.setvar('result_box_content',
                            f"Process failed; at "
                            f"least one of the "
                            f"selected books is "
@@ -743,7 +757,7 @@ def on_return_all_clicked(event: Event) -> None:
 
 
 def render_io_view(event: Event) -> None:
-    """Renders the checkout/return window in the main viewport."""
+    """Renders the **In/Out** window in the main viewport."""
     logging.debug("switched to io view")
     viewport: Frame = event.widget.nametowidget(".viewport")
     clear_widget(viewport)
@@ -859,9 +873,9 @@ def render_io_view(event: Event) -> None:
                         bg=PALETTE['grey'],
                         name='results_box',
                         wraplength=160,
-                        font=('helvetica', 15, 'bold'),
+                        font=('helvetica', 15, 'italic'),
                         textvariable=StringVar(
-                            value='window init',
+                            value='',
                             name='result_box_content'
                         )
                         )
@@ -876,15 +890,123 @@ def render_io_view(event: Event) -> None:
     return_all_button.bind('<1>', on_return_all_clicked)
 
     viewport.event_generate('<<SelectionUpdate>>')
-    return None
+    return
 
 
 def on_order_clicked(event: Event) -> None:
     """To be called when the *Order* button is pressed."""
     global window_state
     window_state = 'order'
-    event.widget.event_generate("<<OrderClicked>>")
-    return None
+    event.widget.event_generate('<<OrderClicked>>')
+    return
+
+
+def change_canvas_function_to_db(event: Event) -> None:
+    """Changes the matplotlib graphic in the **Order** \\
+    view to the version that contains data about the entire \\
+    database."""
+    global canvas_function
+    canvas_function = get_database_multiplot
+    event.widget.event_generate('<<OrderClicked>>')
+    results_box = event.widget.nametowidget('.viewport.menu_frame.results_box')
+    results_box.config(text='Switched to database view.')
+
+
+def change_canvas_function_to_lf(event: Event) -> None:
+    """Changes the matplotlib graphic in the **Order**\\
+    view to the version that contains data about activity \\
+    in the logfile."""
+    global canvas_function
+    canvas_function = get_logfile_multiplot
+    event.widget.event_generate('<<OrderClicked>>')
+    results_box = event.widget.nametowidget('.viewport.menu_frame.results_box')
+    results_box.config(text='Switched to activity view.')
+
+
+def on_get_recommendations_clicked(event: Event) -> None:
+    """A callback function triggered by the \\
+    **Get Recommendations** button in the **Order** view."""
+    global window_state
+    window_state = 'recommendations'
+    event.widget.event_generate('<<GetRecommendationsClicked>>')
+
+
+def render_recommendation_view(event: Event) -> None:
+    """Renders the recommendation view in the main \\
+    viewport. This function is always preceded by a call \\
+    to `render_order_view`."""
+    logging.debug("switched to recommendation view")
+    viewport: Frame = event.widget.nametowidget(".viewport")
+    global recommendation_options
+
+    # get budget info, return to previous view if this fails
+    try:
+        budget: int = int(
+            event.widget.nametowidget(".viewport.menu_frame.budget_entry").get()
+        )
+    except (ValueError, TypeError):
+        root = event.widget.nametowidget('.')
+        event.widget.event_generate('<<OrderClicked>>')
+        results_box: Label = root.nametowidget('.viewport'
+                                               '.menu_frame'
+                                               '.results_box')
+        results_box.config(text='Failed to retrieve recommendations; '
+                                'the provided budget could not be '
+                                'converted to an integer.')
+        return
+
+    clear_widget(viewport)
+
+    # initialize top-level containers
+    left_frame: Frame = Frame(viewport,
+                              name='left_frame')
+    left_frame.grid(row=0, column=0)
+    recommendation_title: Label = Label(left_frame,
+                                        text='Order Recommendations',
+                                        font=('helvetica', 20, 'bold'))
+    recommendation_title.grid(row=0, column=0)
+    text_body: Label = Label(left_frame,
+                             text=get_recommendation_string(budget),
+                             font=('helvetica', 14),
+                             wraplength=200)
+    text_body.grid(row=1, column=0, padx=7)
+    canvas_frame: Frame = Frame(viewport,
+                                name='canvas_frame')
+    canvas_frame.grid(row=0, column=1)
+
+    # get and draw matplotlib graphic
+    recommendations = get_recommendation_data(budget)
+    try:
+        canvas = FigureCanvasTkAgg(
+            get_recommendation_multiplot(recommendations['author_recommendation'],
+                                         recommendations['genre_recommendation'],
+                                         just_authors=
+                                         recommendation_options['just_authors'],
+                                         just_genres=
+                                         recommendation_options['just_genres'],
+                                         rough_budget=
+                                         recommendation_options['rough_budget']),
+            master=canvas_frame)
+    except ValueError:
+        root = event.widget.nametowidget('.')
+        event.widget.event_generate('<<OrderClicked>>')
+        results_box: Label = root.nametowidget('.viewport'
+                                               '.menu_frame'
+                                               '.results_box')
+        results_box.config(text='Failed to retrieve recommendations; '
+                                'the selected options are '
+                                'incompatible')
+        return
+    canvas.get_tk_widget().config(width=320, height=470)
+    canvas.get_tk_widget().grid(row=0, column=0)
+    return
+
+
+def flip_option(option: str):
+    """A utility function for handling the state of \\
+    the options on the **Order** menu."""
+    global recommendation_options
+    recommendation_options[option] = not recommendation_options[option]
 
 
 def render_order_view(event: Event) -> None:
@@ -903,12 +1025,30 @@ def render_order_view(event: Event) -> None:
                               bg=PALETTE['blue'])
     menu_frame.grid(row=0, column=1)
 
+    # initializing results box
+    results_box: Label = Label(menu_frame,
+                               text='',
+                               height=8,
+                               width=20,
+                               font=('helvetica', 15, 'italic'),
+                               name='results_box',
+                               wraplength=180)
+    results_box.grid(row=8, column=0, columnspan=2, padx=3, pady=2)
+
     # initialize budget entry components in menu_frame
     budget_label: Label = Label(menu_frame,
                                 text='Budget:',
                                 font=('helvetica', 18, 'bold'),
                                 bg=PALETTE['blue'])
     budget_label.grid(row=0, column=0, padx=3)
+    budget_label.bind('<Enter>',
+                      lambda _: results_box
+                      .config(
+                          text='Enter a budget here, '
+                               'and then click "Get Recommendations" '
+                               'to receive recommendations!'
+                      ))
+    budget_label.bind('<Leave>', lambda _: results_box.config(text=""))
     budget_entry: Entry = Entry(menu_frame,
                                 width=10,
                                 name='budget_entry')
@@ -919,33 +1059,82 @@ def render_order_view(event: Event) -> None:
                                                    text='Just Authors',
                                                    font=('helvetica', 10),
                                                    bg=PALETTE['blue'],
-                                                   name='just_authors_option')
+                                                   name='just_authors_option',
+                                                   command=lambda:
+                                                   flip_option('just_authors'))
     just_authors_option.grid(row=1, column=1, pady=3, sticky=W)
+    just_authors_option.bind('<Enter>',
+                             lambda _: results_box
+                             .config(
+                                 text='Select this option '
+                                      'to restrict the recommendation '
+                                      'to just authors, rather than '
+                                      'both authors and genres.'
+                             ))
+    just_authors_option.bind('<Leave>', lambda _: results_box.config(text=''))
     just_genres_option: Checkbutton = Checkbutton(menu_frame,
                                                   text='Just Genres',
                                                   font=('helvetica', 10),
                                                   bg=PALETTE['blue'],
-                                                  name='just_genres_option')
+                                                  name='just_genres_option',
+                                                  command=lambda:
+                                                  flip_option('just_genres'))
     just_genres_option.grid(row=2, column=1, pady=3, sticky=W)
+    just_genres_option.bind('<Enter>',
+                            lambda _: results_box
+                            .config(
+                                text='Select this option '
+                                     'to restrict the recommendation '
+                                     'to just genres, rather than '
+                                     'both authors and genres.'
+                            ))
+    just_genres_option.bind('<Leave>', lambda _: results_box.config(text=''))
     rough_budget_option: Checkbutton = Checkbutton(menu_frame,
                                                    text='Rough Budget',
                                                    font=('helvetica', 10),
                                                    bg=PALETTE['blue'],
-                                                   name='rough_budget_option')
+                                                   name='rough_budget_option',
+                                                   command=lambda:
+                                                   flip_option('rough_budget'))
     rough_budget_option.grid(row=3, column=1, pady=3, sticky=W)
+    rough_budget_option.bind('<Enter>',
+                             lambda _: results_box
+                             .config(
+                                 text='Select this option '
+                                      'to receive a recommendation '
+                                      'which may not strictly adhere to '
+                                      'the budget.'
+                             ))
+    rough_budget_option.bind('<Leave>', lambda _: results_box.config(text=''))
     lower_spacer: Frame = Frame(menu_frame,
-                                height=320,
+                                height=100,
                                 bg=PALETTE['blue'])
     lower_spacer.grid(row=4, column=0, columnspan=2)
+
+    # adding data-switch buttons
+    database_button: Button = Button(menu_frame,
+                                     text='Switch to Database View',
+                                     width=18,
+                                     font=('helvetica', 15, 'bold'))
+    database_button.bind('<1>', change_canvas_function_to_db)
+    database_button.grid(row=5, column=0, columnspan=2, pady=2)
+    logfile_button: Button = Button(menu_frame,
+                                    text='Switch to Activity View',
+                                    width=18,
+                                    font=('helvetica', 15, 'bold'))
+    logfile_button.bind('<1>', change_canvas_function_to_lf)
+    logfile_button.grid(row=6, column=0, columnspan=2, pady=2)
 
     # initializing the confirm button
     confirm_button: Button = Button(menu_frame,
                                     text='Get Recommendations',
-                                    font=('helvetica', 15, 'bold'))
-    confirm_button.grid(row=5, column=0, columnspan=2, padx=3, pady=5)
+                                    font=('helvetica', 15, 'bold'),
+                                    width=18)
+    confirm_button.bind('<1>', on_get_recommendations_clicked)
+    confirm_button.grid(row=7, column=0, columnspan=2, padx=3, pady=2)
 
     # initializing the canvas section
-    canvas = FigureCanvasTkAgg(get_order_menu_multiplot(),
+    canvas = FigureCanvasTkAgg(canvas_function(),
                                master=canvas_frame)
     e = Event()
     e.width = 360
@@ -959,7 +1148,7 @@ def render_order_view(event: Event) -> None:
 
 def init_menu() -> Tk:
     """Initializes the core menu components, and
-    then returns a reference to the window root"""
+    then returns a reference to the window root."""
     # init window
     root: Tk = Tk()
     root.title("Library Tool: Oliver Wooding")
@@ -970,6 +1159,7 @@ def init_menu() -> Tk:
     root.bind("<<SearchClicked>>", render_search_view)
     root.bind("<<IOClicked>>", render_io_view)
     root.bind("<<OrderClicked>>", render_order_view)
+    root.bind("<<GetRecommendationsClicked>>", render_recommendation_view)
     root.bind("<<LogUpdate>>", update_activity_list)
     root.bind("<<SelectionUpdate>>", update_selection_view)
     root.bind('<Return>', return_handler)
@@ -1043,7 +1233,10 @@ def init_menu() -> Tk:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(filename="DO_NOT_SUBMIT/general.log",
-                        encoding="utf-8",
-                        level=0)
-    init_menu().mainloop()
+    # measuring start-up time and total runtime
+    start_time = perf_counter()
+    print('Initializing window...')
+    window = init_menu()
+    print(f'Window initialized in {perf_counter() - start_time:.4f}s')
+    window.mainloop()
+    print(f'Application ran for {perf_counter() - start_time:.4f}s')
