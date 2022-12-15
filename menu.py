@@ -6,6 +6,11 @@ executable script, which is to say that the program
 as a whole should be run using this script.
 
 The main dependency is tkinter, which is used for creating the GUI.
+
+In particular, this script functions by invoking event_generate to
+send events around the UI, particularly user-defined events like
+<<SelectionUpdate>> and <<IOClicked>>, which help to construct a
+cleaner, non-blocking UI
 """
 import logging
 from time import perf_counter
@@ -279,7 +284,8 @@ def add_to_selection(book_id: int) -> None:
 
 
 def remove_from_selection(book_id: int) -> None:
-    """Assumes that the input is valid, and removes a book from the selection."""
+    """Assumes that the input is valid, and removes a \\
+    book from the selection."""
     total_selection.remove(get_book(book_id))
     return None
 
@@ -305,14 +311,16 @@ def add_to_selection_by_entry(event: Event) -> None:
         return None
 
     if get_book(int(entry_text)) in total_selection:
-        results_box.setvar('result_box_content', f"Tried to add a book with the ID: "
-                                                 f"\'{entry_text}\'.\n\n "
-                                                 f"This book is already in the selection.")
+        results_box.setvar('result_box_content',
+                           f"Tried to add a book with the ID: "
+                           f"\'{entry_text}\'.\n\n "
+                           f"This book is already in the selection.")
         return None
 
     add_to_selection(int(entry_text))
-    results_box.setvar('result_box_content', f"Added a book with the ID: "
-                                             f"\'{entry_text}\'.\n\n This process was successful.")
+    results_box.setvar('result_box_content',
+                       f"Added a book with the ID: "
+                       f"\'{entry_text}\'.\n\n This process was successful.")
     event.widget.event_generate('<<SelectionUpdate>>')
     return None
 
@@ -337,9 +345,10 @@ def remove_from_selection_by_entry(event: Event) -> None:
         return None
 
     if get_book(int(entry_text)) not in total_selection:
-        results_box.setvar('result_box_content', f"Tried to remove a book with the ID: "
-                                                 f"\'{entry_text}\'.\n\n "
-                                                 f"This book is not in the selection.")
+        results_box.setvar('result_box_content',
+                           f"Tried to remove a book with the ID: "
+                           f"\'{entry_text}\'.\n\n "
+                           f"This book is not in the selection.")
         return None
 
     remove_from_selection(int(entry_text))
@@ -1240,3 +1249,7 @@ if __name__ == "__main__":
     print(f'Window initialized in {perf_counter() - start_time:.4f}s')
     window.mainloop()
     print(f'Application ran for {perf_counter() - start_time:.4f}s')
+
+    # this section contains no tests apart from the timing parts above,
+    # because callback functions are (by definition) not pure, and
+    # their side effects would prevent effective testing

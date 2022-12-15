@@ -1,7 +1,8 @@
 """Database Interaction Tools
 
 This script provides functions to interact with the database stored in the `book_info.txt` file,
-and also provides a `book` type to facilitate better error messages.
+and also provides a `Book` type to facilitate better error messages. Similarly, a Log type is
+provided to deal with actions on the database, which are recorded in 'logfile.txt'
 
 Aside from the initial header line, each line of `book_info.txt` corresponds to a particular book,
 and the particular fields of each book are separated by semicolons (;). These fields are, in order, as follows:
@@ -12,9 +13,19 @@ and the particular fields of each book are separated by semicolons (;). These fi
 - Author: The name of the author, in forename-surname order
 - Purchase Price: The price of the book in GBP
 - Purchase Date: The date on which the book was purchased, in the datetime.date format
+
+In much the same way, each line of 'logfile.txt' corresponds to an action on the database,
+and each 'word' in the action is separated with a space. Each action is made of four words, and
+in order these are:
+
+- Action: A string corresponding to the kind of action taken
+- Book ID: An integer corresponding to a particular book
+- Member ID: A string corresponding to a four digit member ID
+- Date: The date on which the action was taken
 """
 
 from datetime import date
+from pprint import pformat
 from typing import Union, Optional, Literal
 from re import fullmatch
 import logging
@@ -48,18 +59,20 @@ def initialize():
 
 
 def book_to_string(book: Book) -> str:
-    """Converts a `book` tuple into a string that can be written to the `book_info.txt` file."""
+    """Converts a `book` tuple into a string \\
+    that can be written to the `book_info.txt` file."""
     s = [str(a) for a in book]
     return ';'.join(s)
 
 
 def book_entry_is_valid(entry: str) -> bool:
     """Validates that a particular entry in the database is valid."""
-    return bool(fullmatch(r'/\d+;.+;.+;\d+;\d+-\d+-\d+/gm', entry))
+    return bool(fullmatch(r'\d+;.+;.+;\d+;\d+-\d+-\d+', entry))
 
 
 def write_book(book: Book) -> None:
-    """Writes a book to the `book_info.txt` file as a new line at the end of the file."""
+    """Writes a book to the `book_info.txt` \\
+    file as a new line at the end of the file."""
     with open("data_files/book_info.txt", 'r') as db:
         lines = db.readlines()
         ids = set([int(line.split(';')[0]) for line in lines])
@@ -83,15 +96,17 @@ def get_logs() -> list[Log]:
     with open("data_files/logfile.txt", 'r') as log:
         logs = log.readlines()[1:]
 
-    return [(l.split(" ")[0],
-             int(l.split(" ")[1]),
-             l.split(" ")[2],
-             date(*[int(i) for i in l.split(" ")[3].split('-')])) for l in logs]
+    return [(log.split(" ")[0],
+             int(log.split(" ")[1]),
+             log.split(" ")[2],
+             date(
+                 *[int(i) for i in log.split(" ")[3].split('-')])
+             ) for log in logs]
 
 
 def get_open_logs() -> list[Log]:
-    """Returns a list of logs which have not been closed
-    by a subsequent log. OUT logs are closed by a RETURN log, and
+    """Returns a list of logs which have not been closed \\
+    by a subsequent log. OUT logs are closed by a RETURN log, and \\
     RESERVE logs are closed by a DERESERVE log or OUT log."""
     out: list[Log] = []
     for log in get_logs():
@@ -117,7 +132,8 @@ def get_open_logs() -> list[Log]:
 
 
 def book_id_is_valid(book_id: int) -> bool:
-    """Determines whether a book exists in `book_info.txt` and returns a bool accordingly."""
+    """Determines whether a book exists in \\
+    `book_info.txt` and returns a bool accordingly."""
     if get_book(book_id) is None:
         return False
     else:
@@ -160,8 +176,10 @@ def write_books(books: list[Book]):
 
 
 def get_book(book_id: int) -> Optional[Book]:
-    """Retrieves a book from the `book_info.txt` file and returns it as a tuple with the correct data types.
-    If the provided `book_id` does not exist, then this function returns `None`.
+    """Retrieves a book from the `book_info.txt` file and \\
+    returns it as a tuple with the correct data types. \\
+    If the provided `book_id` does not exist, then this \\
+    function returns `None`.
     """
     with open("data_files/book_info.txt", "r") as db:
         entries = db.readlines()[1:]
@@ -242,7 +260,7 @@ def get_books_by_price(price: int) -> list[Book]:
     books = []
     for entry in entries:
         data = entry.split(';')
-        if data[4] == price:
+        if int(data[4]) <= price:
             books.append(get_book(int(data[0])))
 
     return books
@@ -283,4 +301,101 @@ def get_books_after_date(d: date) -> list[Book]:
 
 
 if __name__ == "__main__":
-    print(get_books_by_genre('maths'))
+    # initialize() is not tested here; it has side effects
+
+    # book_to_string
+    print('book_to_string tests')
+    print(book_to_string(get_book(1)))
+    print(book_to_string(get_book(7)))
+    print(book_to_string(get_book(17)))
+    print(book_to_string(get_book(27)))
+    print('\n')
+
+    # book_entry_is_valid
+    print('book_entry_is_valid tests')
+    print(book_entry_is_valid(book_to_string(get_book(1))))
+    print(book_entry_is_valid(book_to_string(get_book(9))))
+    print(book_entry_is_valid(book_to_string(get_book(90))))
+    print(book_entry_is_valid('hello' + book_to_string(get_book(1))))
+    print('\n')
+
+    # write_book() is not tested here; it has side effects
+    # write_log() is also not tested for the same reason
+
+    # get_logs
+    print('get_logs test')
+    print(pformat(get_logs()))
+    print('\n')
+
+    # get_open_logs
+    print('get_open_logs test')
+    print(pformat(get_open_logs()))
+    print('\n')
+
+    # book_id_is_valid
+    print('book_id_is_valid tests')
+    print(book_id_is_valid(1))
+    print(book_id_is_valid(7))
+    print(book_id_is_valid('eqeq'))
+    print(book_id_is_valid(-1))
+    print(book_id_is_valid(4.7))
+    print('\n')
+
+    # get_book_status
+    print('get_book_status tests')
+    print(get_book_status(1))
+    print(get_book_status(92))
+    print(get_book_status(54))
+    print(get_book_status(32))
+    print('\n')
+
+    # filter_logs_with_id
+    print('filter_logs_with_id tests')
+    print(pformat(filter_logs_with_id(get_logs(), 13)))
+    print(pformat(filter_logs_with_id(get_logs(), 2)))
+    print('\n')
+
+    # write_books() is not tested here; it has side effects
+
+    # get_book
+    print('get_book tests')
+    print(get_book(1))
+    print(get_book(2))
+    print(get_book(16))
+    print(get_book(31))
+    print(get_book(27))
+    print('\n')
+
+    # get_books_by_genre
+    print('get_books_by_genre tests')
+    print(pformat(get_books_by_genre('fantasy')))
+    print(pformat(get_books_by_genre('maths')))
+    print('\n')
+
+    # get_books_by_author
+    print('get_books_by_author tests')
+    print(pformat(get_books_by_author('becky chambers')))
+    print('\n')
+
+    # get_books_by_title
+    print('get_books_by_title tests')
+    print(pformat(get_books_by_title('the way of kings')))
+    print(pformat(get_books_by_title('immune')))
+    print(pformat(get_books_by_title('linear algebra')))
+    print('\n')
+
+    # get_books_by_price
+    print('get_books_by_price tests')
+    print(pformat(get_books_by_price(23)))
+    print(pformat(get_books_by_price(14)))
+    print('\n')
+
+    # get_books_before_date
+    print('get_books_before_date test')
+    print(pformat(get_books_before_date(date(2015, 10, 12))))
+    print('\n')
+
+    # get_books_after_date
+    print('get_books_after_date test')
+    print(pformat(get_books_after_date(date(2022, 10, 12))))
+    print('\n')

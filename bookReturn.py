@@ -1,8 +1,11 @@
 """Book Returning Tools
 
 This script provides functions to deal with \\
-returning books. Broadly, it is build on \\
+returning books. Broadly, it is built on \\
 functions from `database.py`.
+
+This is a pretty minor section of the program; it does not define anything \\
+particularly original here.
 """
 
 from datetime import date
@@ -34,3 +37,8 @@ def return_books(book_ids: list[int]):
     given book_ids by sequentially calling `return_book`"""
     for id in book_ids:
         return_book(id)
+
+
+# neither of these functions can be tested properly, as they
+# have direct side effects on the logfile; hence there is no
+# if __name__ == '__main__' section.

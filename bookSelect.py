@@ -3,6 +3,21 @@
 This script provides functions to get data about the \\
 application, to manipulate that data, and to produce \\
 the required graphics for the application.
+
+In particular, the get_order_menu_multiplot is an \\
+important function to generate the matplotlib graphics \\
+in the Order menu. The functions get_logfile_multiplot \\
+and get_database_multiplot are just wrappers of this \\
+function, and are the actual functions being called in \\
+menu.py.
+
+The algorithm for generating a purchasing recommendation \\
+is relatively simple. I simply take the current popular \\
+books from the logfile, and then compute what proportion \\
+of them is taken up by any given author or genre. Then, \\
+with a budget and average price I can calculate \\
+the number of books to be purchased, and just multiply \\
+every proportion value in the data.
 """
 from math import floor
 
@@ -239,7 +254,9 @@ def get_recommendation_multiplot(author_data: dict[str, int],
                               list(genre_data.values())):
             if value == 0:
                 continue
-            bar: BarContainer = right_plot.bar('g', value, bottom=last_height, yerr=0.05*value)
+            bar: BarContainer = right_plot.bar('g', value,
+                                               bottom=last_height,
+                                               yerr=0.05*value)
             pos = bar.patches[0].get_patch_transform().transform((0.2, 0.5))
             right_plot.annotate(key.title(), pos)
             last_height += value
@@ -280,7 +297,8 @@ def get_order_menu_multiplot(author_data_function: Callable[[], dict[str, int]],
     upper_plot_labels, upper_plot_data = list(
         zip(*reversed(list(author_data.items())[:7]))
     )
-    upper_plot_bars = upper_plot.barh([label.title() for label in upper_plot_labels],
+    upper_plot_bars = upper_plot.barh([label.title()
+                                       for label in upper_plot_labels],
                                       upper_plot_data)
     upper_plot.xaxis.set_visible(False)
     upper_plot.spines['top'].set_visible(False)
@@ -296,7 +314,8 @@ def get_order_menu_multiplot(author_data_function: Callable[[], dict[str, int]],
     lower_plot_labels, lower_plot_data = list(
         zip(*reversed(genre_data.items()))
     )
-    normalized_lower_plot_data = [100*d/sum(lower_plot_data) for d in lower_plot_data]
+    normalized_lower_plot_data = [100*d/sum(lower_plot_data)
+                                  for d in lower_plot_data]
     lower_plot.pie(normalized_lower_plot_data,
                    labels=[label.title() for label in lower_plot_labels],
                    autopct='%.2f')
@@ -313,7 +332,8 @@ def get_logfile_multiplot() -> plt.Figure:
     about the logfile."""
     return get_order_menu_multiplot(get_author_prevalence_in_logfile,
                                     get_genre_prevalence_in_logfile,
-                                    ('Most Popular Authors', 'Most Popular Genres'))
+                                    ('Most Popular Authors',
+                                     'Most Popular Genres'))
 
 
 def get_database_multiplot() -> plt.Figure:
@@ -322,28 +342,55 @@ def get_database_multiplot() -> plt.Figure:
     about the database in its entirety."""
     return get_order_menu_multiplot(get_author_prevalence_in_database,
                                     get_genre_prevalence_in_database,
-                                    ('Top Authors in Database', 'Genres in Database'))
+                                    ('Top Authors in Database',
+                                     'Genres in Database'))
 
 
 if __name__ == "__main__":
     # these functions have no parameters, so they're only tested once each
-    print(
-        pformat(get_author_prevalence_in_database(), sort_dicts=False) + '\n'
-    )
-    print(
-        pformat(get_genre_prevalence_in_database(), sort_dicts=False) + '\n'
-    )
-    print(
-        pformat(get_book_prevalence_in_logfile(), sort_dicts=False) + '\n'
-    )
-    print(
-        pformat(get_genre_prevalence_in_logfile(), sort_dicts=False) + '\n'
-    )
-    print(
-        pformat(get_author_prevalence_in_logfile(), sort_dicts=False) + '\n'
-    )
-    print(
-        pformat(get_recommendation_data(10000))
-    )
-    print(sum(get_recommendation_data(10000)['author_recommendation'].values()),
-          sum(get_recommendation_data(10000)['genre_recommendation'].values()))
+
+    # get_genre_prevalence_in_database
+    print('get_genre_prevalence_in_database test')
+    print(pformat(get_genre_prevalence_in_database()))
+    print('\n')
+
+    # get_author_prevalence_in_database
+    print('get_author_prevalence_in_database test')
+    print(pformat(get_author_prevalence_in_database()))
+    print('\n')
+
+    # get_book_prevalence_logfile
+    print('get_book_prevalence_in_logfile test')
+    print(pformat(get_book_prevalence_in_logfile()))
+    print('\n')
+
+    # get_genre_prevalence_logfile
+    print('get_genre_prevalence_in_logfile test')
+    print(pformat(get_genre_prevalence_in_logfile()))
+    print('\n')
+
+    # get_author_prevalence_logfile
+    print('get_author_prevalence_in_logfile test')
+    print(pformat(get_author_prevalence_in_logfile()))
+    print('\n')
+
+    # get_recommendation_data
+    print('get_recommendation_data test')
+    print(pformat(get_recommendation_data(500)))
+    print('\n')
+
+    # get_recommendation_string
+    print('get_recommendation_string test')
+    print(pformat(get_recommendation_string(500)))
+    print('\n')
+
+    # multiplots
+    get_logfile_multiplot().show()
+    get_database_multiplot().show()
+    get_recommendation_multiplot(
+        get_recommendation_data(500)['author_recommendation'],
+        get_recommendation_data(500)['genre_recommendation'],
+        False,
+        False,
+        False
+    ).show()

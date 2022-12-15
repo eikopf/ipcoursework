@@ -1,7 +1,9 @@
 """Checkout and Reservation Tools
 
 This script provides functions to deal with checking out and reserving \\
-books by members with valid IDs.
+books by members with valid IDs. A number of functions are provided to \\
+filter through data to yield particular information, rather than \\
+having to reimplement the algorithm for something each time.
 
 This script also handles much of the detail of writing to the logfile, where \\
 each line (aside from the header) takes the form of ACTION BOOK_ID MEMBER_ID.
@@ -9,9 +11,12 @@ each line (aside from the header) takes the form of ACTION BOOK_ID MEMBER_ID.
 - ACTION: can be OUT, RETURN, RESERVE, or DERESERVE
 - BOOK_ID: an integer corresponding to the ID of a particular book
 - MEMBER_ID: a 4-digit string denoting a particular member
+- DATE: a datetime.date object corresponding to when the action occurred
 """
 
 import logging
+from pprint import pformat
+
 from database import get_book, get_logs, write_log, \
     Log, filter_logs_with_id, get_open_logs, book_id_is_valid, \
     get_book_status
@@ -20,7 +25,8 @@ from datetime import date
 
 
 def member_id_is_valid(member_id: str) -> bool:
-    """Determines whether the given member id is valid using a regular expression."""
+    """Determines whether the given member ID is \\
+    valid using a regular expression."""
     if fullmatch(r'\d\d\d\d', member_id):
         return True
     else:
@@ -28,7 +34,8 @@ def member_id_is_valid(member_id: str) -> bool:
 
 
 def get_loaned_book_ids(logs: list[Log]) -> set[int]:
-    """Returns the set of book IDs for all the books that are currently loaned out."""
+    """Returns the set of book IDs for all the \\
+    books that are currently loaned out."""
     out = set()
     for log in logs:
         if log[0] == 'OUT':
@@ -39,7 +46,8 @@ def get_loaned_book_ids(logs: list[Log]) -> set[int]:
 
 
 def get_reserved_book_ids(logs: list[Log]) -> set[int]:
-    """Returns the set of book IDs for all the books that are currently reserved."""
+    """Returns the set of book IDs for all the \\
+    books that are currently reserved."""
     out = set()
     for log in logs:
         if log[0] == 'RESERVE':
@@ -50,7 +58,7 @@ def get_reserved_book_ids(logs: list[Log]) -> set[int]:
 
 
 def checkout_book(book_id: int, member_id: str):
-    """Checks a book out and writes the relevant data to the logfile; will
+    """Checks a book out and writes the relevant data to the logfile; will \\
     raise `IOError` if this fails."""
     logging.debug(f'checkout called with book_id: {book_id}, '
                   f'member_id: {member_id}')
@@ -120,27 +128,25 @@ def dereserve(book_id: int):
 
 
 if __name__ == '__main__':
-    print("tests for member_id_is_valid:")
-    print(f"0000: {member_id_is_valid('0000')}")
-    print(f'9999: {member_id_is_valid("9999")}')
-    print(f'70001: {member_id_is_valid("70001")}')
-    print(f'1234: {member_id_is_valid("1234")}')
-    print(f'372: {member_id_is_valid("372")}', "\n")
-    print(f'abc: {member_id_is_valid("abc")}', "\n")
-    print(f'a323: {member_id_is_valid("a323")}', "\n")
-    print(f'0i34: {member_id_is_valid("0o34")}', "\n")
+    # member_id_is_valid
+    print('member_id_is_valid tests')
+    print(member_id_is_valid('1111'))
+    print(member_id_is_valid('adc'))
+    print(member_id_is_valid('9829999'))
+    print(member_id_is_valid('dhjkdha'))
+    print(member_id_is_valid('1919'))
+    print('\n')
 
-    print("tests for book_id_is_valid:")
-    print(f"-1: {book_id_is_valid(-1)}")
-    print(f"45: {book_id_is_valid(45)}")
-    print(f"1: {book_id_is_valid(1)}")
-    print(f"4: {book_id_is_valid(4)}", "\n")
+    # get_loaned_book_ids
+    print('get_loaned_book_ids tests')
+    print(pformat(get_loaned_book_ids(get_logs())))
+    print('\n')
 
-    print(f"set of loaned book IDs: {get_loaned_book_ids(get_logs())}")
-    print(f"set of reserved book IDs: {get_reserved_book_ids(get_logs())}")
+    # get_reserved_book_ids
+    print('get_reserved_book_ids tests')
+    print(pformat(get_reserved_book_ids(get_logs())))
+    print('\n')
 
-    try:
-        checkout_book(17, "1976")
-        print(f'checkout book_id: 17, member_id: "1976", : success')
-    except IOError as e:
-        print(f'checkout book_id: 17, member_id: "1976", : failure -> {e}')
+    # checkout_book and checkout_books will not be tested here.
+    # they have side effects that make them difficult to test well
+    # the same goes for reserve_book, reserve_books, and dereserve
